@@ -67,10 +67,8 @@ const props = defineProps<{
 }>()
 
 const PROCESSING_STATUSES: LyricsVideoStatus[] = [
-  'Downloading',
   'Transcribing',
   'GeneratingVideo',
-  'Uploading',
 ]
 
 const isProcessing = computed(() => PROCESSING_STATUSES.includes(props.result.status))

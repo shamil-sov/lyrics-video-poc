@@ -20,8 +20,18 @@ export async function triggerGeneration(trackUrl: string): Promise<TriggerRespon
   })
 }
 
+export async function triggerFromFile(file: File): Promise<TriggerResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request<TriggerResponse>('/lyrics-video/from-file', {
+    method: 'POST',
+    body: formData,
+  })
+}
+
 export async function getAllJobs(): Promise<LyricsVideoJob[]> {
-  return request<LyricsVideoJob[]>('/lyrics-videos')
+  const data = await request<{ items: LyricsVideoJob[] }>('/lyrics-videos')
+  return data.items
 }
 
 export async function getJobById(jobId: string): Promise<LyricsVideoJob> {

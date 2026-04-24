@@ -1,23 +1,31 @@
 export type LyricsVideoStatus =
   | 'Pending'
-  | 'Downloading'
   | 'Transcribing'
   | 'GeneratingVideo'
-  | 'Uploading'
   | 'Completed'
   | 'Failed'
 
+export type SourceType = 'BandLabTrack' | 'UploadedFile'
+
 export interface ProviderResult {
   status: LyricsVideoStatus
-  videoUrl?: string
-  srtContent?: string
-  errorMessage?: string
+  videoUrl?: string | null
+  srtContent?: string | null
+  errorMessage?: string | null
+}
+
+export interface JobMetadata {
+  songName?: string | null
+  songPictureUrl?: string | null
+  creatorName?: string | null
 }
 
 export interface LyricsVideoJob {
   id: string
-  postId: string
-  trackUrl: string
+  sourceType: SourceType
+  postId?: string | null
+  trackUrl?: string | null
+  metadata?: JobMetadata | null
   openAi: ProviderResult
   googleChirp: ProviderResult
   createdAt: string

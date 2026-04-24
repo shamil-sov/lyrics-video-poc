@@ -21,10 +21,8 @@ const props = defineProps<{
 }>()
 
 const PROCESSING_STATUSES: LyricsVideoStatus[] = [
-  'Downloading',
   'Transcribing',
   'GeneratingVideo',
-  'Uploading',
 ]
 
 const isProcessing = computed(() => PROCESSING_STATUSES.includes(props.status))
@@ -43,10 +41,8 @@ const icon = computed(() => {
     case 'Completed': return 'mdi-check-circle'
     case 'Failed': return 'mdi-alert-circle'
     case 'Pending': return 'mdi-clock-outline'
-    case 'Downloading': return 'mdi-download'
     case 'Transcribing': return 'mdi-text-recognition'
     case 'GeneratingVideo': return 'mdi-movie-open'
-    case 'Uploading': return 'mdi-upload'
     default: return 'mdi-help-circle'
   }
 })

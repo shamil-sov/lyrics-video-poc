@@ -1,22 +1,53 @@
 <template>
   <v-card>
     <!-- Card Header -->
-    <v-card-title class="d-flex align-center py-3 px-4">
-      <v-icon class="mr-2" size="small" color="primary">mdi-music-note</v-icon>
-      <a
-        :href="job.trackUrl"
-        target="_blank"
-        rel="noopener"
-        class="text-body-2 text-primary text-truncate"
-        style="max-width: 500px"
+    <div class="d-flex align-center py-3 px-4">
+      <!-- Song picture -->
+      <v-avatar
+        v-if="job.metadata?.songPictureUrl"
+        size="40"
+        rounded="lg"
+        class="mr-3"
       >
-        {{ job.trackUrl }}
-      </a>
-      <v-spacer />
-      <v-chip size="x-small" variant="text" class="text-caption text-medium-emphasis">
+        <v-img :src="job.metadata.songPictureUrl + '100'" :alt="job.metadata.songName || 'Song'" />
+      </v-avatar>
+      <v-avatar v-else size="40" rounded="lg" color="grey-lighten-3" class="mr-3">
+        <v-icon :icon="job.sourceType === 'UploadedFile' ? 'mdi-file-music' : 'mdi-music-note'" color="grey" />
+      </v-avatar>
+
+      <!-- Song info -->
+      <div class="flex-grow-1" style="min-width: 0">
+        <div class="d-flex align-center ga-2">
+          <span v-if="job.metadata?.songName" class="text-subtitle-2 font-weight-medium text-truncate">
+            {{ job.metadata.songName }}
+          </span>
+          <span v-else class="text-subtitle-2 font-weight-medium text-truncate text-medium-emphasis">
+            {{ job.sourceType === 'UploadedFile' ? 'Uploaded File' : 'BandLab Track' }}
+          </span>
+          <v-chip size="x-small" variant="outlined" :color="job.sourceType === 'UploadedFile' ? 'secondary' : 'primary'" class="flex-shrink-0">
+            {{ job.sourceType === 'UploadedFile' ? 'File' : 'Track' }}
+          </v-chip>
+        </div>
+        <div class="d-flex align-center ga-2 text-caption text-medium-emphasis">
+          <span v-if="job.metadata?.creatorName">by {{ job.metadata.creatorName }}</span>
+          <span v-if="job.metadata?.creatorName && job.trackUrl">·</span>
+          <a
+            v-if="job.trackUrl"
+            :href="job.trackUrl"
+            target="_blank"
+            rel="noopener"
+            class="text-primary text-truncate"
+            style="max-width: 350px"
+          >
+            {{ job.trackUrl }}
+          </a>
+        </div>
+      </div>
+
+      <v-chip size="x-small" variant="text" class="text-caption text-medium-emphasis flex-shrink-0">
         {{ formatDate(job.createdAt) }}
       </v-chip>
-    </v-card-title>
+    </div>
 
     <v-divider />
 

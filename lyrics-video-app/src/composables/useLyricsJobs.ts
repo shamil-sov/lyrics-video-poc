@@ -1,7 +1,7 @@
 import { ref, onUnmounted } from 'vue'
 import type { LyricsVideoJob } from '@/types/lyricsVideo'
 import { isJobComplete } from '@/types/lyricsVideo'
-import { getAllJobs, triggerGeneration } from '@/services/api'
+import { getAllJobs, triggerGeneration, triggerFromFile } from '@/services/api'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -43,6 +43,20 @@ export function useLyricsJobs() {
     }
   }
 
+  async function submitFile(file: File) {
+    submitting.value = true
+    error.value = null
+    try {
+      await triggerFromFile(file)
+      await fetchJobs()
+      managePoll()
+    } catch (e: any) {
+      error.value = e.message || 'Failed to upload file'
+    } finally {
+      submitting.value = false
+    }
+  }
+
   function managePoll() {
     const hasActiveJobs = jobs.value.some(j => !isJobComplete(j))
     if (hasActiveJobs && !pollTimer) {
@@ -73,5 +87,6 @@ export function useLyricsJobs() {
     error,
     loadJobs,
     submitJob,
+    submitFile,
   }
 }
