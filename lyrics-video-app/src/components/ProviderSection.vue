@@ -17,16 +17,18 @@
       rounded
     />
 
-    <!-- Video Player -->
-    <div v-if="result.status === 'Completed' && result.videoUrl" class="mb-3 d-flex justify-center">
-      <video
-        :src="result.videoUrl"
-        controls
-        preload="metadata"
-        class="provider-video"
+    <div class="d-flex align-center justify-space-between mb-3 ga-2">
+      <span class="text-caption text-medium-emphasis">{{ helperText }}</span>
+      <v-btn
+        v-if="result.status === 'Completed' && result.videoUrl"
+        size="small"
+        variant="tonal"
+        color="primary"
+        prepend-icon="mdi-play-circle-outline"
+        @click="emit('preview', result.videoUrl)"
       >
-        Your browser does not support the video tag.
-      </video>
+        Preview
+      </v-btn>
     </div>
 
     <!-- Error Message -->
@@ -66,18 +68,31 @@ const props = defineProps<{
   result: ProviderResult
 }>()
 
+const emit = defineEmits<{
+  preview: [videoUrl: string]
+}>()
+
 const PROCESSING_STATUSES: LyricsVideoStatus[] = [
   'Transcribing',
   'GeneratingVideo',
 ]
 
 const isProcessing = computed(() => PROCESSING_STATUSES.includes(props.result.status))
-</script>
 
-<style scoped>
-.provider-video {
-  width: min(100%, 280px);
-  border-radius: 8px;
-  background: #000;
-}
-</style>
+const helperText = computed(() => {
+  switch (props.result.status) {
+    case 'Pending':
+      return 'Queued and waiting to start'
+    case 'Transcribing':
+      return 'Extracting lyrics and timing'
+    case 'GeneratingVideo':
+      return 'Rendering final video'
+    case 'Completed':
+      return 'Video is ready to preview'
+    case 'Failed':
+      return props.result.errorMessage || 'Generation failed'
+    default:
+      return ''
+  }
+})
+</script>

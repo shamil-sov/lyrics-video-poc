@@ -31,7 +31,7 @@ const color = computed(() => {
   switch (props.status) {
     case 'Completed': return 'success'
     case 'Failed': return 'error'
-    case 'Pending': return 'grey'
+    case 'Pending': return 'warning'
     default: return 'info'
   }
 })
