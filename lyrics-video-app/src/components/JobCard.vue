@@ -47,6 +47,16 @@
       <v-chip size="x-small" variant="text" class="text-caption text-medium-emphasis flex-shrink-0">
         {{ formatDate(job.createdAt) }}
       </v-chip>
+      <v-btn
+        icon="mdi-delete-outline"
+        size="small"
+        variant="text"
+        color="error"
+        class="ml-1"
+        :loading="deleting"
+        :disabled="deleting"
+        @click="emit('remove', job.id)"
+      />
     </div>
 
     <v-divider />
@@ -82,6 +92,11 @@ import ProviderSection from './ProviderSection.vue'
 
 defineProps<{
   job: LyricsVideoJob
+  deleting?: boolean
+}>()
+
+const emit = defineEmits<{
+  remove: [jobId: string]
 }>()
 
 function formatDate(dateStr: string): string {

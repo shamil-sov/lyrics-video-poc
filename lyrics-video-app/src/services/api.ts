@@ -2,6 +2,13 @@ import type { LyricsVideoJob, TriggerResponse } from '@/types/lyricsVideo'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bl-uat-fn-video-previews.azurewebsites.net/api'
 
+interface UploadUrlResponse {
+  jobId: string
+  uploadUrl: string
+  blobUrl: string
+  expiresOn: string
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`
   const response = await fetch(url, options)
@@ -21,11 +28,30 @@ export async function triggerGeneration(trackUrl: string): Promise<TriggerRespon
 }
 
 export async function triggerFromFile(file: File): Promise<TriggerResponse> {
-  const formData = new FormData()
-  formData.append('file', file)
-  return request<TriggerResponse>('/lyrics-video/from-file', {
+  const fileName = file.name || 'audio.bin'
+  const params = new URLSearchParams({ fileName })
+  const upload = await request<UploadUrlResponse>(`/lyrics-video/upload-url?${params.toString()}`, {
     method: 'POST',
-    body: formData,
+  })
+
+  const uploadResponse = await fetch(upload.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'x-ms-blob-type': 'BlockBlob',
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  })
+
+  if (!uploadResponse.ok) {
+    const text = await uploadResponse.text().catch(() => '')
+    throw new Error(`Blob upload failed ${uploadResponse.status}: ${text || uploadResponse.statusText}`)
+  }
+
+  return request<TriggerResponse>(`/lyrics-video/from-upload/${upload.jobId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blobUrl: upload.blobUrl }),
   })
 }
 
@@ -36,4 +62,10 @@ export async function getAllJobs(): Promise<LyricsVideoJob[]> {
 
 export async function getJobById(jobId: string): Promise<LyricsVideoJob> {
   return request<LyricsVideoJob>(`/lyrics-video/${jobId}`)
+}
+
+export async function deleteJob(jobId: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/lyrics-video/${jobId}`, {
+    method: 'DELETE',
+  })
 }

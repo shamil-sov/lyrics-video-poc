@@ -1,7 +1,7 @@
 import { ref, onUnmounted } from 'vue'
 import type { LyricsVideoJob } from '@/types/lyricsVideo'
 import { isJobComplete } from '@/types/lyricsVideo'
-import { getAllJobs, triggerGeneration, triggerFromFile } from '@/services/api'
+import { deleteJob, getAllJobs, triggerGeneration, triggerFromFile } from '@/services/api'
 
 const POLL_INTERVAL_MS = 5000
 
@@ -9,6 +9,7 @@ export function useLyricsJobs() {
   const jobs = ref<LyricsVideoJob[]>([])
   const loading = ref(false)
   const submitting = ref(false)
+  const deletingJobId = ref<string | null>(null)
   const error = ref<string | null>(null)
 
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -57,6 +58,20 @@ export function useLyricsJobs() {
     }
   }
 
+  async function removeJob(jobId: string) {
+    deletingJobId.value = jobId
+    error.value = null
+    try {
+      await deleteJob(jobId)
+      await fetchJobs()
+      managePoll()
+    } catch (e: any) {
+      error.value = e.message || 'Failed to delete job'
+    } finally {
+      deletingJobId.value = null
+    }
+  }
+
   function managePoll() {
     const hasActiveJobs = jobs.value.some(j => !isJobComplete(j))
     if (hasActiveJobs && !pollTimer) {
@@ -84,9 +99,11 @@ export function useLyricsJobs() {
     jobs,
     loading,
     submitting,
+    deletingJobId,
     error,
     loadJobs,
     submitJob,
     submitFile,
+    removeJob,
   }
 }

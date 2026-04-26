@@ -117,7 +117,13 @@
       </div>
 
       <div v-else class="d-flex flex-column ga-4">
-        <JobCard v-for="job in jobs" :key="job.id" :job="job" />
+        <JobCard
+          v-for="job in jobs"
+          :key="job.id"
+          :job="job"
+          :deleting="deletingJobId === job.id"
+          @remove="handleDelete"
+        />
       </div>
     </template>
   </v-container>
@@ -128,7 +134,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
 
-const { jobs, loading, submitting, error, loadJobs, submitJob, submitFile } = useLyricsJobs()
+const { jobs, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
 
 const inputTab = ref('url')
 const trackUrl = ref('')
@@ -153,6 +159,13 @@ async function handleFileSubmit() {
   if (!selectedFile.value) return
   await submitFile(selectedFile.value)
   selectedFile.value = undefined
+}
+
+async function handleDelete(jobId: string) {
+  const confirmed = window.confirm('Delete this lyrics video job? This cannot be undone.')
+  if (!confirmed) return
+
+  await removeJob(jobId)
 }
 
 onMounted(loadJobs)

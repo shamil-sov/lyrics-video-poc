@@ -18,12 +18,12 @@
     />
 
     <!-- Video Player -->
-    <div v-if="result.status === 'Completed' && result.videoUrl" class="mb-3">
+    <div v-if="result.status === 'Completed' && result.videoUrl" class="mb-3 d-flex justify-center">
       <video
         :src="result.videoUrl"
         controls
         preload="metadata"
-        style="width: 100%; border-radius: 8px; background: #000"
+        class="provider-video"
       >
         Your browser does not support the video tag.
       </video>
@@ -73,3 +73,11 @@ const PROCESSING_STATUSES: LyricsVideoStatus[] = [
 
 const isProcessing = computed(() => PROCESSING_STATUSES.includes(props.result.status))
 </script>
+
+<style scoped>
+.provider-video {
+  width: min(100%, 280px);
+  border-radius: 8px;
+  background: #000;
+}
+</style>
