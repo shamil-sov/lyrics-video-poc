@@ -20,7 +20,7 @@
 
       <v-card-text>
         <!-- URL Tab -->
-        <v-form v-if="inputTab === 'url'" @submit.prevent="handleUrlSubmit" class="d-flex align-center ga-3">
+        <v-form ref="urlForm" v-if="inputTab === 'url'" @submit.prevent="handleUrlSubmit" class="d-flex align-center ga-3">
           <v-text-field
             v-model="trackUrl"
             label="BandLab Track URL"
@@ -130,13 +130,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
 
 const { jobs, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
 
 const inputTab = ref('url')
+const urlForm = ref<{ resetValidation: () => void } | null>(null)
 const trackUrl = ref('')
 const selectedFile = ref<File | undefined>()
 
@@ -151,13 +152,19 @@ const isValidUrl = computed(() => {
 
 async function handleUrlSubmit() {
   if (!isValidUrl.value) return
-  await submitJob(trackUrl.value)
+  const submitted = await submitJob(trackUrl.value)
+  if (!submitted) return
+
   trackUrl.value = ''
+  await nextTick()
+  urlForm.value?.resetValidation()
 }
 
 async function handleFileSubmit() {
   if (!selectedFile.value) return
-  await submitFile(selectedFile.value)
+  const submitted = await submitFile(selectedFile.value)
+  if (!submitted) return
+
   selectedFile.value = undefined
 }
 

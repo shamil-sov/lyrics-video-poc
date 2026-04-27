@@ -30,29 +30,33 @@ export function useLyricsJobs() {
     managePoll()
   }
 
-  async function submitJob(trackUrl: string) {
+  async function submitJob(trackUrl: string): Promise<boolean> {
     submitting.value = true
     error.value = null
     try {
       await triggerGeneration(trackUrl)
       await fetchJobs()
       managePoll()
+      return true
     } catch (e: any) {
       error.value = e.message || 'Failed to submit job'
+      return false
     } finally {
       submitting.value = false
     }
   }
 
-  async function submitFile(file: File) {
+  async function submitFile(file: File): Promise<boolean> {
     submitting.value = true
     error.value = null
     try {
       await triggerFromFile(file)
       await fetchJobs()
       managePoll()
+      return true
     } catch (e: any) {
       error.value = e.message || 'Failed to upload file'
+      return false
     } finally {
       submitting.value = false
     }
