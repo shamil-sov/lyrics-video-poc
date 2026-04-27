@@ -123,6 +123,68 @@
 
         <v-divider />
 
+        <v-sheet
+          v-if="props.job.evaluation"
+          class="mx-5 mt-4 pa-4 evaluation-panel"
+          border
+          rounded="xl"
+        >
+          <div class="d-flex align-center ga-2 flex-wrap mb-3">
+            <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
+            <span class="text-body-1 font-weight-medium">Gemini evaluation</span>
+            <v-chip size="small" variant="tonal" :color="evaluationStatusColor(props.job.evaluation.status)">
+              {{ evaluationStatusLabel(props.job.evaluation.status) }}
+            </v-chip>
+            <v-chip
+              v-if="props.job.evaluation.status === 'Completed' && props.job.evaluation.winner"
+              size="small"
+              variant="flat"
+              color="success"
+            >
+              {{ winnerLabel(props.job.evaluation.winner) }}
+            </v-chip>
+            <v-chip v-if="props.job.evaluation.evaluationMs != null" size="small" variant="outlined">
+              Evaluated in {{ formatTiming(props.job.evaluation.evaluationMs) }}
+            </v-chip>
+          </div>
+
+          <div v-if="props.job.evaluation.status === 'Evaluating'">
+            <p class="evaluation-note mb-3">
+              Gemini Flash-Lite is comparing both transcriptions against the original audio.
+            </p>
+            <v-progress-linear indeterminate color="primary" rounded />
+          </div>
+
+          <v-alert
+            v-else-if="props.job.evaluation.status === 'Failed' && props.job.evaluation.errorMessage"
+            type="error"
+            variant="tonal"
+          >
+            {{ props.job.evaluation.errorMessage }}
+          </v-alert>
+
+          <div v-else-if="props.job.evaluation.status === 'Completed'">
+            <p v-if="props.job.evaluation.summary" class="evaluation-summary mb-3">
+              {{ props.job.evaluation.summary }}
+            </p>
+
+            <div class="evaluation-score-grid">
+              <div class="evaluation-score-card">
+                <span class="evaluation-score-label">OpenAI score</span>
+                <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.openAiScore) }}</span>
+              </div>
+              <div class="evaluation-score-card">
+                <span class="evaluation-score-label">Google score</span>
+                <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p v-else class="evaluation-note mb-0">
+            Evaluation starts after both transcription providers finish.
+          </p>
+        </v-sheet>
+
         <div class="px-4 pt-3 details-tab-bar">
           <v-btn
             class="details-tab-button"
@@ -155,6 +217,17 @@
                   <v-icon icon="mdi-robot" size="small" color="primary" />
                   <span class="text-subtitle-2 font-weight-medium">OpenAI Whisper</span>
                   <v-spacer />
+                  <v-chip
+                    v-if="providerScore('openAi') != null"
+                    size="small"
+                    variant="tonal"
+                    color="primary"
+                  >
+                    {{ formatScore(providerScore('openAi')) }}
+                  </v-chip>
+                  <v-chip v-if="isProviderWinner('openAi')" size="small" variant="flat" color="success">
+                    Winner
+                  </v-chip>
                   <StatusChip :status="props.job.openAi.status" />
                 </div>
 
@@ -201,6 +274,21 @@
                   </div>
                 </v-sheet>
 
+                <v-sheet
+                  v-if="providerIssues('openAi').length"
+                  class="issues-panel mb-4 pa-3"
+                  border
+                  rounded="lg"
+                >
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
+                    <span class="text-body-2 font-weight-medium">Evaluation issues</span>
+                  </div>
+                  <ul class="issues-list">
+                    <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
+                  </ul>
+                </v-sheet>
+
                 <div
                   v-if="props.job.openAi.videoUrl || props.job.openAi.srtContent"
                   class="mb-4 details-media-layout"
@@ -244,6 +332,17 @@
                   <v-icon icon="mdi-google" size="small" color="secondary" />
                   <span class="text-subtitle-2 font-weight-medium">Google Chirp3</span>
                   <v-spacer />
+                  <v-chip
+                    v-if="providerScore('google') != null"
+                    size="small"
+                    variant="tonal"
+                    color="secondary"
+                  >
+                    {{ formatScore(providerScore('google')) }}
+                  </v-chip>
+                  <v-chip v-if="isProviderWinner('google')" size="small" variant="flat" color="success">
+                    Winner
+                  </v-chip>
                   <StatusChip :status="props.job.googleChirp.status" />
                 </div>
 
@@ -288,6 +387,21 @@
                       <span class="timings-stat__value">{{ formatTiming(remainingTiming(props.job.googleChirp.timings)) }}</span>
                     </div>
                   </div>
+                </v-sheet>
+
+                <v-sheet
+                  v-if="providerIssues('google').length"
+                  class="issues-panel mb-4 pa-3"
+                  border
+                  rounded="lg"
+                >
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
+                    <span class="text-body-2 font-weight-medium">Evaluation issues</span>
+                  </div>
+                  <ul class="issues-list">
+                    <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
+                  </ul>
                 </v-sheet>
 
                 <div
@@ -335,8 +449,17 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { LyricsVideoJob, ProviderResult, ProviderTimings } from '@/types/lyricsVideo'
+import type {
+  EvaluationStatus,
+  EvaluationWinner,
+  LyricsVideoEvaluation,
+  LyricsVideoJob,
+  ProviderResult,
+  ProviderTimings,
+} from '@/types/lyricsVideo'
 import StatusChip from './StatusChip.vue'
+
+type ProviderKey = 'openAi' | 'google'
 
 const props = defineProps<{
   job: LyricsVideoJob
@@ -391,6 +514,77 @@ function summaryText(result: ProviderResult): string {
     default:
       return ''
   }
+}
+
+function evaluationStatusColor(status: EvaluationStatus): string {
+  switch (status) {
+    case 'Completed':
+      return 'success'
+    case 'Evaluating':
+      return 'info'
+    case 'Failed':
+      return 'error'
+    default:
+      return 'warning'
+  }
+}
+
+function evaluationStatusLabel(status: EvaluationStatus): string {
+  switch (status) {
+    case 'Evaluating':
+      return 'Evaluating'
+    case 'Completed':
+      return 'Completed'
+    case 'Failed':
+      return 'Failed'
+    default:
+      return 'Pending'
+  }
+}
+
+function winnerLabel(winner: EvaluationWinner): string {
+  switch (winner) {
+    case 'OpenAI':
+      return 'Winner: OpenAI'
+    case 'GoogleChirp3':
+      return 'Winner: Google'
+    case 'Tie':
+      return 'Tie'
+    default:
+      return 'Both weak'
+  }
+}
+
+function isProviderWinner(provider: ProviderKey): boolean {
+  const winner = props.job.evaluation?.winner
+  return (provider === 'openAi' && winner === 'OpenAI')
+    || (provider === 'google' && winner === 'GoogleChirp3')
+}
+
+function providerScore(provider: ProviderKey): number | null {
+  const evaluation = props.job.evaluation
+  if (!evaluation || evaluation.status !== 'Completed') {
+    return null
+  }
+
+  return provider === 'openAi'
+    ? evaluation.openAiScore ?? null
+    : evaluation.googleChirpScore ?? null
+}
+
+function providerIssues(provider: ProviderKey): string[] {
+  const evaluation: LyricsVideoEvaluation | null | undefined = props.job.evaluation
+  if (!evaluation || evaluation.status !== 'Completed') {
+    return []
+  }
+
+  return provider === 'openAi'
+    ? evaluation.openAiIssues ?? []
+    : evaluation.googleChirpIssues ?? []
+}
+
+function formatScore(score?: number | null): string {
+  return score == null ? '--' : `${score}/10`
 }
 
 function formatTiming(value?: number | null): string {
@@ -588,6 +782,52 @@ function formatDate(dateStr: string): string {
   background: rgba(var(--v-theme-background), 0.55);
 }
 
+.evaluation-panel {
+  background: rgba(var(--v-theme-surface), 0.98);
+}
+
+.evaluation-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+
+.evaluation-summary {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(var(--v-theme-on-surface), 0.82);
+}
+
+.evaluation-score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.evaluation-score-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.evaluation-score-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
+}
+
+.evaluation-score-value {
+  font-size: 18px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  font-weight: 700;
+}
+
 .details-tab-bar {
   display: flex;
   gap: 12px;
@@ -624,6 +864,18 @@ function formatDate(dateStr: string): string {
 
 .timings-panel {
   background: rgba(var(--v-theme-on-surface), 0.02);
+}
+
+.issues-panel {
+  background: rgba(var(--v-theme-warning), 0.06);
+}
+
+.issues-list {
+  margin: 0;
+  padding-left: 18px;
+  color: rgba(var(--v-theme-on-surface), 0.78);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .timings-grid {
@@ -717,6 +969,10 @@ function formatDate(dateStr: string): string {
   }
 
   .timings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-score-grid {
     grid-template-columns: 1fr;
   }
 
