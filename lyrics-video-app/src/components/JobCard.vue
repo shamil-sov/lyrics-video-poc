@@ -1,7 +1,7 @@
 <template>
   <v-card class="job-card">
     <div class="job-row px-4 py-3">
-      <div class="d-flex align-center ga-3 flex-grow-1" style="min-width: 0">
+      <div class="job-main d-flex ga-3 flex-grow-1" style="min-width: 0">
         <v-avatar
           v-if="props.job.metadata?.songPictureUrl"
           size="52"
@@ -65,14 +65,22 @@
         <div class="job-status-card">
           <span class="job-status-label">OpenAI</span>
           <StatusChip :status="props.job.openAi.status" />
+          <div v-if="props.job.openAi.timings?.totalMs != null" class="job-status-time-pill">
+            <v-icon icon="mdi-timer-outline" size="x-small" />
+            <span>{{ formatTiming(props.job.openAi.timings?.totalMs) }}</span>
+          </div>
         </div>
         <div class="job-status-card">
           <span class="job-status-label">Google</span>
           <StatusChip :status="props.job.googleChirp.status" />
+          <div v-if="props.job.googleChirp.timings?.totalMs != null" class="job-status-time-pill">
+            <v-icon icon="mdi-timer-outline" size="x-small" />
+            <span>{{ formatTiming(props.job.googleChirp.timings?.totalMs) }}</span>
+          </div>
         </div>
       </div>
 
-      <div class="d-flex align-center ga-1 flex-shrink-0">
+      <div class="job-actions d-flex ga-1 flex-shrink-0">
         <v-btn
           size="small"
           variant="tonal"
@@ -97,7 +105,7 @@
       </div>
     </div>
 
-    <v-dialog v-model="detailsOpen" max-width="1320">
+    <v-dialog v-model="detailsOpen" max-width="1040">
       <v-card rounded="xl">
         <div class="d-flex align-center px-4 py-3 ga-3">
           <div class="flex-grow-1" style="min-width: 0">
@@ -115,9 +123,33 @@
 
         <v-divider />
 
+        <div class="px-4 pt-3 details-tab-bar">
+          <v-btn
+            class="details-tab-button"
+            :class="{ 'details-tab-button--active': detailsTab === 'openAi' }"
+            :variant="detailsTab === 'openAi' ? 'flat' : 'text'"
+            :color="detailsTab === 'openAi' ? 'primary' : undefined"
+            prepend-icon="mdi-robot"
+            @click="detailsTab = 'openAi'"
+          >
+            OpenAI
+          </v-btn>
+
+          <v-btn
+            class="details-tab-button"
+            :class="{ 'details-tab-button--active': detailsTab === 'google' }"
+            :variant="detailsTab === 'google' ? 'flat' : 'text'"
+            :color="detailsTab === 'google' ? 'primary' : undefined"
+            prepend-icon="mdi-google"
+            @click="detailsTab = 'google'"
+          >
+            Google
+          </v-btn>
+        </div>
+
         <v-card-text class="pa-5 details-body">
-          <v-row class="details-provider-row" dense>
-            <v-col cols="12" xl="6">
+          <v-window v-model="detailsTab" class="details-window">
+            <v-window-item value="openAi">
               <v-sheet class="details-panel pa-5" border rounded="xl">
                 <div class="d-flex align-center ga-2 mb-3">
                   <v-icon icon="mdi-robot" size="small" color="primary" />
@@ -137,6 +169,37 @@
                   rounded
                   class="mb-4"
                 />
+
+                <v-sheet
+                  v-if="hasTimings(props.job.openAi)"
+                  class="timings-panel mb-4 pa-3"
+                  border
+                  rounded="lg"
+                >
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-timer-outline" size="small" color="primary" />
+                    <span class="text-body-2 font-weight-medium">Timing breakdown</span>
+                  </div>
+
+                  <div class="timings-grid">
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Total</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.openAi.timings?.totalMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Transcription</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.openAi.timings?.transcriptionMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">FFmpeg</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.openAi.timings?.ffmpegMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Remaining</span>
+                      <span class="timings-stat__value">{{ formatTiming(remainingTiming(props.job.openAi.timings)) }}</span>
+                    </div>
+                  </div>
+                </v-sheet>
 
                 <div
                   v-if="props.job.openAi.videoUrl || props.job.openAi.srtContent"
@@ -173,9 +236,9 @@
                 </v-alert>
 
               </v-sheet>
-            </v-col>
+            </v-window-item>
 
-            <v-col cols="12" xl="6">
+            <v-window-item value="google">
               <v-sheet class="details-panel pa-5" border rounded="xl">
                 <div class="d-flex align-center ga-2 mb-3">
                   <v-icon icon="mdi-google" size="small" color="secondary" />
@@ -195,6 +258,37 @@
                   rounded
                   class="mb-4"
                 />
+
+                <v-sheet
+                  v-if="hasTimings(props.job.googleChirp)"
+                  class="timings-panel mb-4 pa-3"
+                  border
+                  rounded="lg"
+                >
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-timer-outline" size="small" color="secondary" />
+                    <span class="text-body-2 font-weight-medium">Timing breakdown</span>
+                  </div>
+
+                  <div class="timings-grid">
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Total</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.googleChirp.timings?.totalMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Transcription</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.googleChirp.timings?.transcriptionMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">FFmpeg</span>
+                      <span class="timings-stat__value">{{ formatTiming(props.job.googleChirp.timings?.ffmpegMs) }}</span>
+                    </div>
+                    <div class="timings-stat">
+                      <span class="timings-stat__label">Remaining</span>
+                      <span class="timings-stat__value">{{ formatTiming(remainingTiming(props.job.googleChirp.timings)) }}</span>
+                    </div>
+                  </div>
+                </v-sheet>
 
                 <div
                   v-if="props.job.googleChirp.videoUrl || props.job.googleChirp.srtContent"
@@ -231,8 +325,8 @@
                 </v-alert>
 
               </v-sheet>
-            </v-col>
-          </v-row>
+            </v-window-item>
+          </v-window>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -241,7 +335,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { LyricsVideoJob, ProviderResult } from '@/types/lyricsVideo'
+import type { LyricsVideoJob, ProviderResult, ProviderTimings } from '@/types/lyricsVideo'
 import StatusChip from './StatusChip.vue'
 
 const props = defineProps<{
@@ -254,6 +348,7 @@ const emit = defineEmits<{
 }>()
 
 const detailsOpen = ref(false)
+const detailsTab = ref<'openAi' | 'google'>('openAi')
 
 const sourceLabel = computed(() => {
   return props.job.sourceType === 'UploadedFile' ? 'File upload' : 'BandLab track'
@@ -269,11 +364,16 @@ const dialogTitle = computed(() => {
 })
 
 function openDetails() {
+  detailsTab.value = 'openAi'
   detailsOpen.value = true
 }
 
 function isProcessing(result: ProviderResult): boolean {
   return result.status === 'Transcribing' || result.status === 'GeneratingVideo'
+}
+
+function hasTimings(result: ProviderResult): boolean {
+  return result.timings != null && Object.values(result.timings).some((value) => value != null)
 }
 
 function summaryText(result: ProviderResult): string {
@@ -291,6 +391,36 @@ function summaryText(result: ProviderResult): string {
     default:
       return ''
   }
+}
+
+function formatTiming(value?: number | null): string {
+  if (value == null) {
+    return '--'
+  }
+
+  if (value < 1000) {
+    return `${value} ms`
+  }
+
+  if (value < 60_000) {
+    return `${(value / 1000).toFixed(1)} s`
+  }
+
+  const minutes = Math.floor(value / 60_000)
+  const seconds = ((value % 60_000) / 1000).toFixed(1)
+  return `${minutes}m ${seconds}s`
+}
+
+function remainingTiming(timings?: ProviderTimings | null): number | null {
+  if (!timings?.totalMs) {
+    return null
+  }
+
+  const transcription = timings.transcriptionMs ?? 0
+  const ffmpeg = timings.ffmpegMs ?? 0
+  const remaining = timings.totalMs - transcription - ffmpeg
+
+  return remaining > 0 ? remaining : 0
 }
 
 function formatDate(dateStr: string): string {
@@ -316,8 +446,12 @@ function formatDate(dateStr: string): string {
 .job-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
+  align-items: start;
   gap: 20px;
+}
+
+.job-main {
+  align-items: flex-start;
 }
 
 .job-avatar {
@@ -381,6 +515,7 @@ function formatDate(dateStr: string): string {
 .job-statuses {
   justify-content: flex-end;
   gap: 12px;
+  align-self: start;
 }
 
 .job-status-card {
@@ -401,6 +536,29 @@ function formatDate(dateStr: string): string {
   line-height: 1.2;
   color: rgba(var(--v-theme-on-surface), 0.56);
   font-weight: 600;
+}
+
+.job-status-time-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-primary), 0.08);
+  color: rgba(var(--v-theme-on-surface), 0.74);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.job-status-time-pill :deep(.v-icon) {
+  opacity: 0.72;
+}
+
+.job-actions {
+  align-items: flex-start;
+  align-self: start;
+  padding-top: 4px;
 }
 
 .job-link-pill {
@@ -430,8 +588,72 @@ function formatDate(dateStr: string): string {
   background: rgba(var(--v-theme-background), 0.55);
 }
 
+.details-tab-bar {
+  display: flex;
+  gap: 12px;
+  background: rgba(var(--v-theme-surface), 0.96);
+}
+
+.details-tab-button {
+  min-width: 150px;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  color: rgba(var(--v-theme-on-surface), 0.74);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.details-tab-button--active {
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
+  border-color: rgba(var(--v-theme-primary), 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.details-window {
+  overflow: visible;
+}
+
 .details-provider-row {
   row-gap: 20px;
+}
+
+.timings-panel {
+  background: rgba(var(--v-theme-on-surface), 0.02);
+}
+
+.timings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.timings-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-surface), 0.92);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.timings-stat__label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
+}
+
+.timings-stat__value {
+  font-size: 13px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.88);
+  font-weight: 700;
 }
 
 .details-media-layout {
@@ -488,6 +710,22 @@ function formatDate(dateStr: string): string {
 
   .job-statuses {
     justify-content: flex-start;
+  }
+
+  .job-actions {
+    padding-top: 0;
+  }
+
+  .timings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .details-tab-bar {
+    flex-direction: column;
+  }
+
+  .details-tab-button {
+    width: 100%;
   }
 }
 </style>

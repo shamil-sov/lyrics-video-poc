@@ -7,11 +7,38 @@ export type LyricsVideoStatus =
 
 export type SourceType = 'BandLabTrack' | 'UploadedFile'
 
+export type EvaluationStatus = 'Pending' | 'Evaluating' | 'Completed' | 'Failed'
+
+export type EvaluationWinner = 'OpenAI' | 'GoogleChirp3' | 'Tie' | 'BothBad'
+
+export interface ProviderTimings {
+  transcriptionMs?: number | null
+  videoGenerationMs?: number | null
+  backgroundDownloadMs?: number | null
+  ffmpegMs?: number | null
+  uploadMs?: number | null
+  totalMs?: number | null
+  videoSizeBytes?: number | null
+}
+
 export interface ProviderResult {
   status: LyricsVideoStatus
   videoUrl?: string | null
   srtContent?: string | null
   errorMessage?: string | null
+  timings?: ProviderTimings | null
+}
+
+export interface LyricsVideoEvaluation {
+  status: EvaluationStatus
+  winner?: EvaluationWinner | null
+  openAiScore?: number | null
+  googleChirpScore?: number | null
+  summary?: string | null
+  openAiIssues?: string[] | null
+  googleChirpIssues?: string[] | null
+  errorMessage?: string | null
+  evaluationMs?: number | null
 }
 
 export interface JobMetadata {
@@ -25,9 +52,12 @@ export interface LyricsVideoJob {
   sourceType: SourceType
   postId?: string | null
   trackUrl?: string | null
+  fileName?: string | null
   metadata?: JobMetadata | null
   openAi: ProviderResult
   googleChirp: ProviderResult
+  geminiFlash?: ProviderResult | null
+  evaluation?: LyricsVideoEvaluation | null
   createdAt: string
   updatedAt: string
 }
@@ -40,10 +70,18 @@ export interface TriggerResponse {
 
 export const TERMINAL_STATUSES: LyricsVideoStatus[] = ['Completed', 'Failed']
 
+export const EVALUATION_TERMINAL_STATUSES: EvaluationStatus[] = ['Completed', 'Failed']
+
 export function isTerminal(status: LyricsVideoStatus): boolean {
   return TERMINAL_STATUSES.includes(status)
 }
 
+export function isEvaluationTerminal(status: EvaluationStatus): boolean {
+  return EVALUATION_TERMINAL_STATUSES.includes(status)
+}
+
 export function isJobComplete(job: LyricsVideoJob): boolean {
-  return isTerminal(job.openAi.status) && isTerminal(job.googleChirp.status)
+  const providersComplete = isTerminal(job.openAi.status) && isTerminal(job.googleChirp.status)
+  const evaluationComplete = job.evaluation == null || isEvaluationTerminal(job.evaluation.status)
+  return providersComplete && evaluationComplete
 }
