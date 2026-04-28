@@ -69,6 +69,10 @@
             <v-icon icon="mdi-timer-outline" size="x-small" />
             <span>{{ formatTiming(props.job.openAi.timings?.totalMs) }}</span>
           </div>
+          <div v-if="providerScore('openAi') != null" class="job-status-score-pill">
+            <v-icon icon="mdi-star-four-points-outline" size="x-small" />
+            <span>{{ formatScore(providerScore('openAi')) }}</span>
+          </div>
         </div>
         <div class="job-status-card">
           <span class="job-status-label">Google</span>
@@ -76,6 +80,10 @@
           <div v-if="props.job.googleChirp.timings?.totalMs != null" class="job-status-time-pill">
             <v-icon icon="mdi-timer-outline" size="x-small" />
             <span>{{ formatTiming(props.job.googleChirp.timings?.totalMs) }}</span>
+          </div>
+          <div v-if="providerScore('google') != null" class="job-status-score-pill">
+            <v-icon icon="mdi-star-four-points-outline" size="x-small" />
+            <span>{{ formatScore(providerScore('google')) }}</span>
           </div>
         </div>
       </div>
@@ -105,7 +113,7 @@
       </div>
     </div>
 
-    <v-dialog v-model="detailsOpen" max-width="1040">
+    <v-dialog v-model="detailsOpen" max-width="1320">
       <v-card rounded="xl">
         <div class="d-flex align-center px-4 py-3 ga-3">
           <div class="flex-grow-1" style="min-width: 0">
@@ -178,6 +186,30 @@
                 <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
               </div>
             </div>
+
+            <div class="evaluation-issues-grid mt-3">
+              <div class="issues-panel pa-3">
+                <div class="d-flex align-center ga-2 mb-2">
+                  <v-icon icon="mdi-robot" size="small" color="primary" />
+                  <span class="text-body-2 font-weight-medium">OpenAI issues</span>
+                </div>
+                <ul v-if="providerIssues('openAi').length" class="issues-list">
+                  <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
+                </ul>
+                <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+              </div>
+
+              <div class="issues-panel pa-3">
+                <div class="d-flex align-center ga-2 mb-2">
+                  <v-icon icon="mdi-google" size="small" color="secondary" />
+                  <span class="text-body-2 font-weight-medium">Google issues</span>
+                </div>
+                <ul v-if="providerIssues('google').length" class="issues-list">
+                  <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
+                </ul>
+                <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+              </div>
+            </div>
           </div>
 
           <p v-else class="evaluation-note mb-0">
@@ -185,33 +217,9 @@
           </p>
         </v-sheet>
 
-        <div class="px-4 pt-3 details-tab-bar">
-          <v-btn
-            class="details-tab-button"
-            :class="{ 'details-tab-button--active': detailsTab === 'openAi' }"
-            :variant="detailsTab === 'openAi' ? 'flat' : 'text'"
-            :color="detailsTab === 'openAi' ? 'primary' : undefined"
-            prepend-icon="mdi-robot"
-            @click="detailsTab = 'openAi'"
-          >
-            OpenAI
-          </v-btn>
-
-          <v-btn
-            class="details-tab-button"
-            :class="{ 'details-tab-button--active': detailsTab === 'google' }"
-            :variant="detailsTab === 'google' ? 'flat' : 'text'"
-            :color="detailsTab === 'google' ? 'primary' : undefined"
-            prepend-icon="mdi-google"
-            @click="detailsTab = 'google'"
-          >
-            Google
-          </v-btn>
-        </div>
-
         <v-card-text class="pa-5 details-body">
-          <v-window v-model="detailsTab" class="details-window">
-            <v-window-item value="openAi">
+          <v-row class="details-provider-row" dense>
+            <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
                 <div class="d-flex align-center ga-2 mb-3">
                   <v-icon icon="mdi-robot" size="small" color="primary" />
@@ -274,21 +282,6 @@
                   </div>
                 </v-sheet>
 
-                <v-sheet
-                  v-if="providerIssues('openAi').length"
-                  class="issues-panel mb-4 pa-3"
-                  border
-                  rounded="lg"
-                >
-                  <div class="d-flex align-center ga-2 mb-2">
-                    <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
-                    <span class="text-body-2 font-weight-medium">Evaluation issues</span>
-                  </div>
-                  <ul class="issues-list">
-                    <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
-                  </ul>
-                </v-sheet>
-
                 <div
                   v-if="props.job.openAi.videoUrl || props.job.openAi.srtContent"
                   class="mb-4 details-media-layout"
@@ -324,9 +317,9 @@
                 </v-alert>
 
               </v-sheet>
-            </v-window-item>
+            </v-col>
 
-            <v-window-item value="google">
+            <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
                 <div class="d-flex align-center ga-2 mb-3">
                   <v-icon icon="mdi-google" size="small" color="secondary" />
@@ -389,21 +382,6 @@
                   </div>
                 </v-sheet>
 
-                <v-sheet
-                  v-if="providerIssues('google').length"
-                  class="issues-panel mb-4 pa-3"
-                  border
-                  rounded="lg"
-                >
-                  <div class="d-flex align-center ga-2 mb-2">
-                    <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
-                    <span class="text-body-2 font-weight-medium">Evaluation issues</span>
-                  </div>
-                  <ul class="issues-list">
-                    <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
-                  </ul>
-                </v-sheet>
-
                 <div
                   v-if="props.job.googleChirp.videoUrl || props.job.googleChirp.srtContent"
                   class="mb-4 details-media-layout"
@@ -439,8 +417,8 @@
                 </v-alert>
 
               </v-sheet>
-            </v-window-item>
-          </v-window>
+            </v-col>
+          </v-row>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -471,7 +449,6 @@ const emit = defineEmits<{
 }>()
 
 const detailsOpen = ref(false)
-const detailsTab = ref<'openAi' | 'google'>('openAi')
 
 const sourceLabel = computed(() => {
   return props.job.sourceType === 'UploadedFile' ? 'File upload' : 'BandLab track'
@@ -487,7 +464,6 @@ const dialogTitle = computed(() => {
 })
 
 function openDetails() {
-  detailsTab.value = 'openAi'
   detailsOpen.value = true
 }
 
@@ -749,6 +725,23 @@ function formatDate(dateStr: string): string {
   opacity: 0.72;
 }
 
+.job-status-score-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-warning), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.78);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.job-status-score-pill :deep(.v-icon) {
+  opacity: 0.8;
+}
+
 .job-actions {
   align-items: flex-start;
   align-self: start;
@@ -804,6 +797,12 @@ function formatDate(dateStr: string): string {
   gap: 10px;
 }
 
+.evaluation-issues-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .evaluation-score-card {
   display: flex;
   flex-direction: column;
@@ -826,36 +825,6 @@ function formatDate(dateStr: string): string {
   line-height: 1.2;
   color: rgba(var(--v-theme-on-surface), 0.9);
   font-weight: 700;
-}
-
-.details-tab-bar {
-  display: flex;
-  gap: 12px;
-  background: rgba(var(--v-theme-surface), 0.96);
-}
-
-.details-tab-button {
-  min-width: 150px;
-  min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-on-surface), 0.03);
-  color: rgba(var(--v-theme-on-surface), 0.74);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.details-tab-button--active {
-  background: rgba(var(--v-theme-primary), 0.12);
-  color: rgb(var(--v-theme-primary));
-  border-color: rgba(var(--v-theme-primary), 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-}
-
-.details-window {
-  overflow: visible;
 }
 
 .details-provider-row {
@@ -976,12 +945,8 @@ function formatDate(dateStr: string): string {
     grid-template-columns: 1fr;
   }
 
-  .details-tab-bar {
-    flex-direction: column;
-  }
-
-  .details-tab-button {
-    width: 100%;
+  .evaluation-issues-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
