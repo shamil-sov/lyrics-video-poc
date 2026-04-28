@@ -111,6 +111,33 @@
         />
       </div>
 
+      <v-sheet
+        v-if="hasGlobalScores"
+        class="mb-4 pa-4 scores-overview"
+        border
+        rounded="xl"
+      >
+        <div class="d-flex align-center ga-2 flex-wrap mb-3">
+          <v-icon color="primary">mdi-chart-box-outline</v-icon>
+          <span class="text-subtitle-2 font-weight-medium">Global evaluation scores</span>
+        </div>
+
+        <div class="scores-overview-grid">
+          <div class="scores-overview-card">
+            <span class="scores-overview-label">OpenAI average</span>
+            <span class="scores-overview-value">{{ formatAverage(averages?.openAiAverage) }}</span>
+          </div>
+          <div class="scores-overview-card">
+            <span class="scores-overview-label">Google average</span>
+            <span class="scores-overview-value">{{ formatAverage(averages?.googleChirpAverage) }}</span>
+          </div>
+          <div class="scores-overview-card">
+            <span class="scores-overview-label">Evaluated jobs</span>
+            <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }}</span>
+          </div>
+        </div>
+      </v-sheet>
+
       <div v-if="jobs.length === 0" class="text-center py-12 text-medium-emphasis">
         <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-video-off-outline</v-icon>
         <p class="text-body-1">No jobs yet. Paste a track URL or upload an audio file to get started.</p>
@@ -134,7 +161,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
 
-const { jobs, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
+const { jobs, averages, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
 
 const inputTab = ref('url')
 const urlForm = ref<{ resetValidation: () => void } | null>(null)
@@ -149,6 +176,16 @@ const rules = {
 const isValidUrl = computed(() => {
   return trackUrl.value.length > 0 && /^https?:\/\/.+/.test(trackUrl.value)
 })
+
+const hasGlobalScores = computed(() => {
+  return averages.value?.openAiAverage != null
+    || averages.value?.googleChirpAverage != null
+    || averages.value?.evaluatedCount != null
+})
+
+function formatAverage(value?: number | null): string {
+  return value == null ? '--' : `${value.toFixed(1)}/10`
+}
 
 async function handleUrlSubmit() {
   if (!isValidUrl.value) return
@@ -177,3 +214,45 @@ async function handleDelete(jobId: string) {
 
 onMounted(loadJobs)
 </script>
+
+<style scoped>
+.scores-overview {
+  background: rgba(var(--v-theme-surface), 0.98);
+}
+
+.scores-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scores-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.scores-overview-label {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
+}
+
+.scores-overview-value {
+  font-size: 18px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  font-weight: 700;
+}
+
+@media (max-width: 800px) {
+  .scores-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

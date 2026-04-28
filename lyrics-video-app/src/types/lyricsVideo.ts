@@ -41,6 +41,17 @@ export interface LyricsVideoEvaluation {
   evaluationMs?: number | null
 }
 
+export interface LyricsVideoAverages {
+  openAiAverage?: number | null
+  googleChirpAverage?: number | null
+  evaluatedCount?: number | null
+}
+
+export interface LyricsVideoListResponse {
+  items: LyricsVideoJob[]
+  averages?: LyricsVideoAverages | null
+}
+
 export interface JobMetadata {
   songName?: string | null
   songPictureUrl?: string | null

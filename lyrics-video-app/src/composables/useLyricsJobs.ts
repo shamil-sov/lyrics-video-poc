@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue'
-import type { LyricsVideoJob } from '@/types/lyricsVideo'
+import type { LyricsVideoAverages, LyricsVideoJob } from '@/types/lyricsVideo'
 import { isJobComplete } from '@/types/lyricsVideo'
 import { deleteJob, getAllJobs, triggerGeneration, triggerFromFile } from '@/services/api'
 
@@ -7,6 +7,7 @@ const POLL_INTERVAL_MS = 5000
 
 export function useLyricsJobs() {
   const jobs = ref<LyricsVideoJob[]>([])
+  const averages = ref<LyricsVideoAverages | null>(null)
   const loading = ref(false)
   const submitting = ref(false)
   const deletingJobId = ref<string | null>(null)
@@ -16,7 +17,9 @@ export function useLyricsJobs() {
 
   async function fetchJobs() {
     try {
-      jobs.value = await getAllJobs()
+      const data = await getAllJobs()
+      jobs.value = data.items
+      averages.value = data.averages ?? null
       error.value = null
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch jobs'
@@ -101,6 +104,7 @@ export function useLyricsJobs() {
 
   return {
     jobs,
+    averages,
     loading,
     submitting,
     deletingJobId,

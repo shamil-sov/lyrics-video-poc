@@ -1,4 +1,4 @@
-import type { LyricsVideoJob, TriggerResponse } from '@/types/lyricsVideo'
+import type { LyricsVideoJob, LyricsVideoListResponse, TriggerResponse } from '@/types/lyricsVideo'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bl-uat-fn-video-previews.azurewebsites.net/api'
 
@@ -55,9 +55,8 @@ export async function triggerFromFile(file: File): Promise<TriggerResponse> {
   })
 }
 
-export async function getAllJobs(): Promise<LyricsVideoJob[]> {
-  const data = await request<{ items: LyricsVideoJob[] }>('/lyrics-videos')
-  return data.items
+export async function getAllJobs(): Promise<LyricsVideoListResponse> {
+  return request<LyricsVideoListResponse>('/lyrics-videos')
 }
 
 export async function getJobById(jobId: string): Promise<LyricsVideoJob> {
