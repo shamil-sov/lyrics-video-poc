@@ -1,11 +1,12 @@
 import type {
-  CommentWinnerTag,
-  LyricsVideoComment,
-  LyricsVideoCommentsResponse,
+  LyricsVideoProviderReview,
   LyricsVideoJob,
   LyricsVideoListResponse,
+  ProviderReviewStatus,
   TriggerResponse,
 } from '@/types/lyricsVideo'
+
+export type ReviewProvider = 'openai' | 'google-cloud'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bl-uat-fn-video-previews.azurewebsites.net/api'
 
@@ -16,6 +17,11 @@ interface UploadUrlResponse {
   expiresOn: string
 }
 
+interface GenreUpdateResponse {
+  genreSlug: string
+  genreName: string
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`
   const response = await fetch(url, options)
@@ -24,6 +30,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(`API error ${response.status}: ${text || response.statusText}`)
   }
   return response.json()
+}
+
+async function requestVoid(path: string, options?: RequestInit): Promise<void> {
+  const url = `${BASE_URL}${path}`
+  const response = await fetch(url, options)
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(`API error ${response.status}: ${text || response.statusText}`)
+  }
 }
 
 export async function triggerGeneration(trackUrl: string): Promise<TriggerResponse> {
@@ -76,24 +91,31 @@ export async function deleteJob(jobId: string): Promise<{ message: string }> {
   })
 }
 
-export async function getComments(jobId: string): Promise<LyricsVideoComment[]> {
-  const data = await request<LyricsVideoCommentsResponse>(`/lyrics-video/${jobId}/comments`)
-  return data.items
-}
-
-export async function createComment(
+export async function updateGenre(
   jobId: string,
-  payload: { text: string; winnerTag: CommentWinnerTag },
-): Promise<LyricsVideoComment> {
-  return request<LyricsVideoComment>(`/lyrics-video/${jobId}/comments`, {
-    method: 'POST',
+  payload: { genreSlug: string },
+): Promise<GenreUpdateResponse> {
+  return request<GenreUpdateResponse>(`/lyrics-video/${jobId}/genre`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
 }
 
-export async function deleteComment(commentId: string): Promise<{ message: string }> {
-  return request<{ message: string }>(`/lyrics-video/comments/${commentId}`, {
+export async function setProviderReview(
+  jobId: string,
+  provider: ReviewProvider,
+  payload: { status: ProviderReviewStatus; text?: string },
+): Promise<LyricsVideoProviderReview> {
+  return request<LyricsVideoProviderReview>(`/lyrics-video/${jobId}/approval/${provider}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function clearProviderReview(jobId: string, provider: ReviewProvider): Promise<void> {
+  await requestVoid(`/lyrics-video/${jobId}/approval/${provider}`, {
     method: 'DELETE',
   })
 }

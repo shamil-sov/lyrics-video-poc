@@ -11,7 +11,7 @@ export type EvaluationStatus = 'Pending' | 'Evaluating' | 'Completed' | 'Failed'
 
 export type EvaluationWinner = 'OpenAI' | 'GoogleChirp3' | 'Tie' | 'BothBad'
 
-export type CommentWinnerTag = 'OpenAI' | 'GoogleCloud' | 'Both' | 'None' | 'NotSure'
+export type ProviderReviewStatus = 'Great' | 'Good' | 'Bad' | 'NotSure'
 
 export interface ProviderTimings {
   transcriptionMs?: number | null
@@ -49,16 +49,10 @@ export interface LyricsVideoAverages {
   evaluatedCount?: number | null
 }
 
-export interface LyricsVideoComment {
-  id: string
-  jobId: string
-  text: string
-  winnerTag: CommentWinnerTag
+export interface LyricsVideoProviderReview {
+  status: ProviderReviewStatus
+  text?: string | null
   createdAt: string
-}
-
-export interface LyricsVideoCommentsResponse {
-  items: LyricsVideoComment[]
 }
 
 export interface LyricsVideoListResponse {
@@ -85,8 +79,8 @@ export interface LyricsVideoJob {
   googleChirp: ProviderResult
   geminiFlash?: ProviderResult | null
   evaluation?: LyricsVideoEvaluation | null
-  humanEvaluated?: boolean | null
-  humanWinner?: CommentWinnerTag | null
+  openAiApproval?: LyricsVideoProviderReview | null
+  googleCloudApproval?: LyricsVideoProviderReview | null
   createdAt: string
   updatedAt: string
 }

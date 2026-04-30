@@ -49,7 +49,11 @@ const icon = computed(() => {
 
 const label = computed(() => {
   switch (props.status) {
-    case 'GeneratingVideo': return 'Generating Video'
+    case 'Pending': return 'Queued'
+    case 'Transcribing': return 'Creating subtitles'
+    case 'GeneratingVideo': return 'Generating video'
+    case 'Completed': return 'Video is ready'
+    case 'Failed': return 'Generation failed'
     default: return props.status
   }
 })

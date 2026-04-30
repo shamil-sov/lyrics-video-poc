@@ -137,7 +137,7 @@
           >
             <div class="d-flex align-center ga-2 flex-wrap mb-3">
               <v-icon color="primary">mdi-chart-box-outline</v-icon>
-              <span class="text-subtitle-2 font-weight-medium">Global evaluation scores</span>
+              <span class="text-subtitle-2 font-weight-medium">Global AI evaluation scores</span>
             </div>
 
             <div class="scores-overview-grid">
