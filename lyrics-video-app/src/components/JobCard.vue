@@ -169,7 +169,7 @@
           <v-row class="details-provider-row" dense>
             <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
-                <div class="d-flex align-center ga-2 mb-3">
+                <div class="details-section-header details-section-header--openai d-flex align-center ga-2 mb-4">
                   <v-icon icon="mdi-robot" size="small" color="primary" />
                   <span class="text-subtitle-2 font-weight-medium">OpenAI Whisper</span>
                   <v-spacer />
@@ -266,7 +266,7 @@
 
             <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
-                <div class="d-flex align-center ga-2 mb-3">
+                <div class="details-section-header details-section-header--google d-flex align-center ga-2 mb-4">
                   <v-icon icon="mdi-google" size="small" color="secondary" />
                   <span class="text-subtitle-2 font-weight-medium">Google Chirp3</span>
                   <v-spacer />
@@ -368,7 +368,7 @@
             border
             rounded="xl"
           >
-            <div class="d-flex align-center ga-2 flex-wrap mb-3">
+            <div class="details-section-header details-section-header--evaluation d-flex align-center ga-2 flex-wrap mb-4">
               <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
               <span class="text-body-1 font-weight-medium">AI evaluation</span>
               <v-chip
@@ -451,7 +451,7 @@
           </v-sheet>
 
           <v-sheet class="comments-panel mt-5 pa-5" border rounded="xl">
-            <div class="d-flex align-center ga-2 mb-3">
+            <div class="details-section-header details-section-header--human d-flex align-center ga-2 mb-4">
               <v-icon icon="mdi-comment-text-outline" size="small" color="primary" />
               <span class="text-subtitle-2 font-weight-medium">Human evaluation</span>
               <v-chip size="small" variant="tonal">{{ comments.length }}</v-chip>
@@ -1082,12 +1082,60 @@ function commentWinnerColor(tag: CommentWinnerTag): string {
   transform: translateY(-1px);
 }
 
+.details-panel,
+.evaluation-panel,
+.comments-panel {
+  background: rgba(var(--v-theme-surface), 0.985);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 14px 30px rgba(38, 57, 77, 0.08);
+}
+
 .details-panel {
   height: 100%;
 }
 
-.comments-panel {
-  background: rgba(var(--v-theme-surface), 0.98);
+.details-section-header {
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--v-theme-surface), 0.64);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.details-section-header--openai {
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.2) 0%, rgba(var(--v-theme-primary), 0.1) 100%);
+  border-color: rgba(var(--v-theme-primary), 0.24);
+  box-shadow:
+    inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.details-section-header--google {
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.2) 0%, rgba(var(--v-theme-primary), 0.1) 100%);
+  border-color: rgba(var(--v-theme-primary), 0.24);
+  box-shadow:
+    inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.details-section-header--evaluation {
+  background: linear-gradient(180deg, rgba(var(--v-theme-warning), 0.22) 0%, rgba(var(--v-theme-warning), 0.11) 100%);
+  border-color: rgba(var(--v-theme-warning), 0.26);
+  box-shadow:
+    inset 0 3px 0 rgba(var(--v-theme-warning), 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.details-section-header--human {
+  background: linear-gradient(180deg, rgba(var(--v-theme-success), 0.2) 0%, rgba(var(--v-theme-success), 0.1) 100%);
+  border-color: rgba(var(--v-theme-success), 0.24);
+  box-shadow:
+    inset 0 3px 0 rgba(var(--v-theme-success), 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .comments-form {
@@ -1144,10 +1192,6 @@ function commentWinnerColor(tag: CommentWinnerTag): string {
   background: rgba(var(--v-theme-background), 0.55);
 }
 
-.evaluation-panel {
-  background: rgba(var(--v-theme-surface), 0.98);
-}
-
 .evaluation-note {
   font-size: 13px;
   line-height: 1.5;
@@ -1197,7 +1241,7 @@ function commentWinnerColor(tag: CommentWinnerTag): string {
 }
 
 .details-provider-row {
-  row-gap: 20px;
+  row-gap: 24px;
 }
 
 .timings-panel {
