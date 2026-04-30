@@ -749,6 +749,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   remove: [jobId: string]
+  genreUpdated: [payload: { jobId: string; genreSlug: string; genreName: string }]
 }>()
 
 const detailsOpen = ref(false)
@@ -947,6 +948,11 @@ async function saveGenre() {
 
     genreOverride.value = updatedGenre
     selectedGenreSlug.value = updatedGenre.genreSlug
+    emit('genreUpdated', {
+      jobId: props.job.id,
+      genreSlug: updatedGenre.genreSlug,
+      genreName: updatedGenre.genreName,
+    })
   } catch (e: any) {
     genreError.value = e.message || 'Failed to update genre'
   } finally {
@@ -1056,7 +1062,7 @@ function reviewStatusLabel(status: ProviderReviewStatus): string {
 function reviewStatusColor(status: ProviderReviewStatus): string {
   switch (status) {
     case 'Great':
-      return 'secondary'
+      return 'great'
     case 'Good':
       return 'success'
     case 'Bad':

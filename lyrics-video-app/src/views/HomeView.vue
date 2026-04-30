@@ -95,22 +95,55 @@
     <template v-else>
       <div class="jobs-layout" :class="{ 'jobs-layout--with-sidebar': hasGlobalScores }">
         <div class="jobs-main">
-          <div class="d-flex align-center mb-4">
-            <h2 class="text-h6">
-              <v-icon class="mr-1">mdi-format-list-bulleted</v-icon>
-              Jobs
-            </h2>
-            <v-chip class="ml-2" size="small" color="primary" variant="tonal">
-              {{ jobs.length }}
-            </v-chip>
-            <v-spacer />
-            <v-btn
-              variant="text"
+          <div class="jobs-toolbar mb-4">
+            <div class="d-flex align-center ga-2 flex-wrap">
+              <h2 class="text-h6">
+                <v-icon class="mr-1">mdi-format-list-bulleted</v-icon>
+                Jobs
+              </h2>
+              <v-chip size="small" color="primary" variant="tonal">
+                {{ filteredJobs.length }}
+              </v-chip>
+              <v-chip v-if="selectedGenreFilter !== ALL_GENRES" size="small" variant="text">
+                {{ jobs.length }} total
+              </v-chip>
+            </div>
+
+            <div class="jobs-toolbar-actions">
+              <v-select
+                v-model="selectedGenreFilter"
+                :items="genreFilterOptions"
+                item-title="title"
+                item-value="value"
+                label="Filter by genre"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                class="jobs-genre-filter"
+              />
+
+              <v-btn
+                variant="text"
+                size="small"
+                icon="mdi-refresh"
+                @click="loadJobs"
+                :loading="loading"
+              />
+            </div>
+          </div>
+
+          <div v-if="genreCounts.length" class="genre-filter-chips mb-4">
+            <v-chip
+              v-for="genre in genreFilterOptions"
+              :key="genre.value"
+              :color="selectedGenreFilter === genre.value ? 'primary' : undefined"
+              :variant="selectedGenreFilter === genre.value ? 'flat' : 'tonal'"
               size="small"
-              icon="mdi-refresh"
-              @click="loadJobs"
-              :loading="loading"
-            />
+              class="genre-filter-chip"
+              @click="selectedGenreFilter = genre.value"
+            >
+              {{ genre.genreName }} ({{ genre.count }})
+            </v-chip>
           </div>
 
           <div v-if="jobs.length === 0" class="text-center py-12 text-medium-emphasis">
@@ -118,13 +151,19 @@
             <p class="text-body-1">No jobs yet. Paste a track URL or upload an audio file to get started.</p>
           </div>
 
+          <div v-else-if="filteredJobs.length === 0" class="text-center py-12 text-medium-emphasis">
+            <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-filter-outline</v-icon>
+            <p class="text-body-1">No jobs match the selected genre.</p>
+          </div>
+
           <div v-else class="d-flex flex-column ga-4">
             <JobCard
-              v-for="job in jobs"
+              v-for="job in filteredJobs"
               :key="job.id"
               :job="job"
               :deleting="deletingJobId === job.id"
               @remove="handleDelete"
+              @genre-updated="handleGenreUpdated"
             />
           </div>
         </div>
@@ -165,13 +204,18 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
+import type { LyricsVideoJob } from '@/types/lyricsVideo'
 
 const { jobs, averages, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
+
+const ALL_GENRES = '__all__'
+const NO_GENRE = '__no-genre__'
 
 const inputTab = ref('url')
 const urlForm = ref<{ resetValidation: () => void } | null>(null)
 const trackUrl = ref('')
 const selectedFile = ref<File | undefined>()
+const selectedGenreFilter = ref(ALL_GENRES)
 
 const rules = {
   required: (v: string) => !!v || 'Track URL is required',
@@ -186,6 +230,57 @@ const hasGlobalScores = computed(() => {
   return averages.value?.openAiAverage != null
     || averages.value?.googleChirpAverage != null
     || averages.value?.evaluatedCount != null
+})
+
+const genreCounts = computed(() => {
+  const counts = new Map<string, { value: string; genreName: string; count: number }>()
+
+  for (const job of jobs.value) {
+    const value = job.metadata?.genreSlug ?? NO_GENRE
+    const genreName = job.metadata?.genreName ?? 'No genre'
+    const existing = counts.get(value)
+
+    if (existing) {
+      existing.count += 1
+      continue
+    }
+
+    counts.set(value, { value, genreName, count: 1 })
+  }
+
+  return Array.from(counts.values()).sort((left, right) => {
+    if (left.value === NO_GENRE) return 1
+    if (right.value === NO_GENRE) return -1
+    return left.genreName.localeCompare(right.genreName)
+  })
+})
+
+const genreFilterOptions = computed(() => {
+  return [
+    {
+      title: `All genres (${jobs.value.length})`,
+      value: ALL_GENRES,
+      genreName: 'All genres',
+      count: jobs.value.length,
+    },
+    ...genreCounts.value.map(genre => ({
+      title: `${genre.genreName} (${genre.count})`,
+      value: genre.value,
+      genreName: genre.genreName,
+      count: genre.count,
+    })),
+  ]
+})
+
+const filteredJobs = computed(() => {
+  if (selectedGenreFilter.value === ALL_GENRES) {
+    return jobs.value
+  }
+
+  return jobs.value.filter(job => {
+    const genreSlug = job.metadata?.genreSlug ?? NO_GENRE
+    return genreSlug === selectedGenreFilter.value
+  })
 })
 
 function formatAverage(value?: number | null): string {
@@ -217,6 +312,23 @@ async function handleDelete(jobId: string) {
   await removeJob(jobId)
 }
 
+function handleGenreUpdated(payload: { jobId: string; genreSlug: string; genreName: string }) {
+  jobs.value = jobs.value.map((job: LyricsVideoJob) => {
+    if (job.id !== payload.jobId) {
+      return job
+    }
+
+    return {
+      ...job,
+      metadata: {
+        ...(job.metadata ?? {}),
+        genreSlug: payload.genreSlug,
+        genreName: payload.genreName,
+      },
+    }
+  })
+}
+
 onMounted(loadJobs)
 </script>
 
@@ -228,6 +340,37 @@ onMounted(loadJobs)
 .jobs-layout--with-sidebar {
   position: relative;
   overflow: visible;
+}
+
+.jobs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.jobs-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.jobs-genre-filter {
+  min-width: 240px;
+  max-width: 320px;
+}
+
+.genre-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genre-filter-chip {
+  cursor: pointer;
 }
 
 .jobs-sidebar {
@@ -280,6 +423,19 @@ onMounted(loadJobs)
     position: static;
     width: auto;
     margin-top: 16px;
+  }
+}
+
+@media (max-width: 720px) {
+  .jobs-toolbar,
+  .jobs-toolbar-actions {
+    align-items: stretch;
+  }
+
+  .jobs-genre-filter {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
   }
 }
 </style>
