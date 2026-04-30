@@ -93,64 +93,69 @@
 
     <!-- Jobs List -->
     <template v-else>
-      <div class="d-flex align-center mb-4">
-        <h2 class="text-h6">
-          <v-icon class="mr-1">mdi-format-list-bulleted</v-icon>
-          Jobs
-        </h2>
-        <v-chip class="ml-2" size="small" color="primary" variant="tonal">
-          {{ jobs.length }}
-        </v-chip>
-        <v-spacer />
-        <v-btn
-          variant="text"
-          size="small"
-          icon="mdi-refresh"
-          @click="loadJobs"
-          :loading="loading"
-        />
-      </div>
-
-      <v-sheet
-        v-if="hasGlobalScores"
-        class="mb-4 pa-4 scores-overview"
-        border
-        rounded="xl"
-      >
-        <div class="d-flex align-center ga-2 flex-wrap mb-3">
-          <v-icon color="primary">mdi-chart-box-outline</v-icon>
-          <span class="text-subtitle-2 font-weight-medium">Global evaluation scores</span>
-        </div>
-
-        <div class="scores-overview-grid">
-          <div class="scores-overview-card">
-            <span class="scores-overview-label">OpenAI average</span>
-            <span class="scores-overview-value">{{ formatAverage(averages?.openAiAverage) }}</span>
+      <div class="jobs-layout" :class="{ 'jobs-layout--with-sidebar': hasGlobalScores }">
+        <div class="jobs-main">
+          <div class="d-flex align-center mb-4">
+            <h2 class="text-h6">
+              <v-icon class="mr-1">mdi-format-list-bulleted</v-icon>
+              Jobs
+            </h2>
+            <v-chip class="ml-2" size="small" color="primary" variant="tonal">
+              {{ jobs.length }}
+            </v-chip>
+            <v-spacer />
+            <v-btn
+              variant="text"
+              size="small"
+              icon="mdi-refresh"
+              @click="loadJobs"
+              :loading="loading"
+            />
           </div>
-          <div class="scores-overview-card">
-            <span class="scores-overview-label">Google average</span>
-            <span class="scores-overview-value">{{ formatAverage(averages?.googleChirpAverage) }}</span>
+
+          <div v-if="jobs.length === 0" class="text-center py-12 text-medium-emphasis">
+            <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-video-off-outline</v-icon>
+            <p class="text-body-1">No jobs yet. Paste a track URL or upload an audio file to get started.</p>
           </div>
-          <div class="scores-overview-card">
-            <span class="scores-overview-label">Evaluated jobs</span>
-            <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }}</span>
+
+          <div v-else class="d-flex flex-column ga-4">
+            <JobCard
+              v-for="job in jobs"
+              :key="job.id"
+              :job="job"
+              :deleting="deletingJobId === job.id"
+              @remove="handleDelete"
+            />
           </div>
         </div>
-      </v-sheet>
 
-      <div v-if="jobs.length === 0" class="text-center py-12 text-medium-emphasis">
-        <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-video-off-outline</v-icon>
-        <p class="text-body-1">No jobs yet. Paste a track URL or upload an audio file to get started.</p>
-      </div>
+        <aside v-if="hasGlobalScores" class="jobs-sidebar">
+          <v-sheet
+            class="pa-4 scores-overview"
+            border
+            rounded="xl"
+          >
+            <div class="d-flex align-center ga-2 flex-wrap mb-3">
+              <v-icon color="primary">mdi-chart-box-outline</v-icon>
+              <span class="text-subtitle-2 font-weight-medium">Global evaluation scores</span>
+            </div>
 
-      <div v-else class="d-flex flex-column ga-4">
-        <JobCard
-          v-for="job in jobs"
-          :key="job.id"
-          :job="job"
-          :deleting="deletingJobId === job.id"
-          @remove="handleDelete"
-        />
+            <div class="scores-overview-grid">
+              <div class="scores-overview-card">
+                <span class="scores-overview-label">OpenAI average</span>
+                <span class="scores-overview-value">{{ formatAverage(averages?.openAiAverage) }}</span>
+              </div>
+              <div class="scores-overview-card">
+                <span class="scores-overview-label">Google average</span>
+                <span class="scores-overview-value">{{ formatAverage(averages?.googleChirpAverage) }}</span>
+              </div>
+              <div class="scores-overview-card">
+                <span class="scores-overview-label">Evaluated jobs</span>
+                <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }}</span>
+              </div>
+            </div>
+          </v-sheet>
+        </aside>
       </div>
     </template>
   </v-container>
@@ -216,13 +221,29 @@ onMounted(loadJobs)
 </script>
 
 <style scoped>
+.jobs-layout {
+  display: block;
+}
+
+.jobs-layout--with-sidebar {
+  position: relative;
+  overflow: visible;
+}
+
+.jobs-sidebar {
+  position: absolute;
+  top: 24px;
+  left: calc(100% + 20px);
+  width: 280px;
+}
+
 .scores-overview {
   background: rgba(var(--v-theme-surface), 0.98);
 }
 
 .scores-overview-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -250,9 +271,15 @@ onMounted(loadJobs)
   font-weight: 700;
 }
 
-@media (max-width: 800px) {
-  .scores-overview-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 1460px) {
+  .jobs-layout--with-sidebar {
+    display: block;
+  }
+
+  .jobs-sidebar {
+    position: static;
+    width: auto;
+    margin-top: 16px;
   }
 }
 </style>

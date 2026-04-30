@@ -61,6 +61,40 @@
         </div>
       </div>
 
+      <div class="job-genre-column">
+        <span class="job-genre-label">Genre</span>
+        <div class="job-genre-pill">
+          <v-icon icon="mdi-tag-outline" size="x-small" />
+          <span class="text-truncate">{{ props.job.metadata?.genreName || '--' }}</span>
+        </div>
+      </div>
+
+      <div class="job-human-column">
+        <div class="job-human-header">
+          <span class="job-human-label">Human evaluation</span>
+          <v-tooltip text="Shows whether a human has commented on this job and which provider they picked as the winner." location="top">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon
+                v-bind="tooltipProps"
+                icon="mdi-information-outline"
+                size="x-small"
+                class="job-human-info"
+              />
+            </template>
+          </v-tooltip>
+        </div>
+        <v-chip
+          v-if="effectiveHumanEvaluated && effectiveHumanWinner"
+          size="small"
+          variant="tonal"
+          :color="commentWinnerColor(effectiveHumanWinner)"
+          class="job-human-chip"
+        >
+          {{ commentWinnerLabel(effectiveHumanWinner) }}
+        </v-chip>
+        <span v-else class="job-human-empty">--</span>
+      </div>
+
       <div class="job-statuses d-flex align-center ga-2 flex-wrap">
         <div class="job-status-card">
           <span class="job-status-label">OpenAI</span>
@@ -131,92 +165,6 @@
 
         <v-divider />
 
-        <v-sheet
-          v-if="props.job.evaluation"
-          class="mx-5 mt-4 pa-4 evaluation-panel"
-          border
-          rounded="xl"
-        >
-          <div class="d-flex align-center ga-2 flex-wrap mb-3">
-            <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
-            <span class="text-body-1 font-weight-medium">Gemini evaluation</span>
-            <v-chip size="small" variant="tonal" :color="evaluationStatusColor(props.job.evaluation.status)">
-              {{ evaluationStatusLabel(props.job.evaluation.status) }}
-            </v-chip>
-            <v-chip
-              v-if="props.job.evaluation.status === 'Completed' && props.job.evaluation.winner"
-              size="small"
-              variant="flat"
-              color="success"
-            >
-              {{ winnerLabel(props.job.evaluation.winner) }}
-            </v-chip>
-            <v-chip v-if="props.job.evaluation.evaluationMs != null" size="small" variant="outlined">
-              Evaluated in {{ formatTiming(props.job.evaluation.evaluationMs) }}
-            </v-chip>
-          </div>
-
-          <div v-if="props.job.evaluation.status === 'Evaluating'">
-            <p class="evaluation-note mb-3">
-              Gemini Flash-Lite is comparing both transcriptions against the original audio.
-            </p>
-            <v-progress-linear indeterminate color="primary" rounded />
-          </div>
-
-          <v-alert
-            v-else-if="props.job.evaluation.status === 'Failed' && props.job.evaluation.errorMessage"
-            type="error"
-            variant="tonal"
-          >
-            {{ props.job.evaluation.errorMessage }}
-          </v-alert>
-
-          <div v-else-if="props.job.evaluation.status === 'Completed'">
-            <p v-if="props.job.evaluation.summary" class="evaluation-summary mb-3">
-              {{ props.job.evaluation.summary }}
-            </p>
-
-            <div class="evaluation-score-grid">
-              <div class="evaluation-score-card">
-                <span class="evaluation-score-label">OpenAI score</span>
-                <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.openAiScore) }}</span>
-              </div>
-              <div class="evaluation-score-card">
-                <span class="evaluation-score-label">Google score</span>
-                <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
-              </div>
-            </div>
-
-            <div class="evaluation-issues-grid mt-3">
-              <div class="issues-panel pa-3">
-                <div class="d-flex align-center ga-2 mb-2">
-                  <v-icon icon="mdi-robot" size="small" color="primary" />
-                  <span class="text-body-2 font-weight-medium">OpenAI issues</span>
-                </div>
-                <ul v-if="providerIssues('openAi').length" class="issues-list">
-                  <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
-                </ul>
-                <p v-else class="evaluation-note mb-0">No major issues reported.</p>
-              </div>
-
-              <div class="issues-panel pa-3">
-                <div class="d-flex align-center ga-2 mb-2">
-                  <v-icon icon="mdi-google" size="small" color="secondary" />
-                  <span class="text-body-2 font-weight-medium">Google issues</span>
-                </div>
-                <ul v-if="providerIssues('google').length" class="issues-list">
-                  <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
-                </ul>
-                <p v-else class="evaluation-note mb-0">No major issues reported.</p>
-              </div>
-            </div>
-          </div>
-
-          <p v-else class="evaluation-note mb-0">
-            Evaluation starts after both transcription providers finish.
-          </p>
-        </v-sheet>
-
         <v-card-text class="pa-5 details-body">
           <v-row class="details-provider-row" dense>
             <v-col cols="12" md="6">
@@ -231,15 +179,12 @@
                     variant="tonal"
                     color="primary"
                   >
-                    {{ formatScore(providerScore('openAi')) }}
+                    AI score {{ formatScore(providerScore('openAi')) }}
                   </v-chip>
-                  <v-chip v-if="isProviderWinner('openAi')" size="small" variant="flat" color="success">
-                    Winner
-                  </v-chip>
-                  <StatusChip :status="props.job.openAi.status" />
+                  <StatusChip v-if="props.job.openAi.status !== 'Completed'" :status="props.job.openAi.status" />
                 </div>
 
-                <p class="text-body-2 text-medium-emphasis mb-3">
+                <p v-if="summaryText(props.job.openAi)" class="text-body-2 text-medium-emphasis mb-3">
                   {{ summaryText(props.job.openAi) }}
                 </p>
 
@@ -331,15 +276,12 @@
                     variant="tonal"
                     color="secondary"
                   >
-                    {{ formatScore(providerScore('google')) }}
+                    AI score {{ formatScore(providerScore('google')) }}
                   </v-chip>
-                  <v-chip v-if="isProviderWinner('google')" size="small" variant="flat" color="success">
-                    Winner
-                  </v-chip>
-                  <StatusChip :status="props.job.googleChirp.status" />
+                  <StatusChip v-if="props.job.googleChirp.status !== 'Completed'" :status="props.job.googleChirp.status" />
                 </div>
 
-                <p class="text-body-2 text-medium-emphasis mb-3">
+                <p v-if="summaryText(props.job.googleChirp)" class="text-body-2 text-medium-emphasis mb-3">
                   {{ summaryText(props.job.googleChirp) }}
                 </p>
 
@@ -419,6 +361,195 @@
               </v-sheet>
             </v-col>
           </v-row>
+
+          <v-sheet
+            v-if="props.job.evaluation"
+            class="evaluation-panel mt-5 pa-4"
+            border
+            rounded="xl"
+          >
+            <div class="d-flex align-center ga-2 flex-wrap mb-3">
+              <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
+              <span class="text-body-1 font-weight-medium">AI evaluation</span>
+              <v-chip
+                v-if="props.job.evaluation.status !== 'Completed'"
+                size="small"
+                variant="tonal"
+                :color="evaluationStatusColor(props.job.evaluation.status)"
+              >
+                {{ evaluationStatusLabel(props.job.evaluation.status) }}
+              </v-chip>
+              <v-chip
+                v-if="props.job.evaluation.status === 'Completed' && props.job.evaluation.winner"
+                size="small"
+                variant="flat"
+                color="success"
+              >
+                {{ winnerLabel(props.job.evaluation.winner) }}
+              </v-chip>
+            </div>
+
+            <div v-if="props.job.evaluation.status === 'Evaluating'">
+              <p class="evaluation-note mb-3">
+                Gemini Flash-Lite is comparing both transcriptions against the original audio.
+              </p>
+              <v-progress-linear indeterminate color="primary" rounded />
+            </div>
+
+            <v-alert
+              v-else-if="props.job.evaluation.status === 'Failed' && props.job.evaluation.errorMessage"
+              type="error"
+              variant="tonal"
+            >
+              {{ props.job.evaluation.errorMessage }}
+            </v-alert>
+
+            <div v-else-if="props.job.evaluation.status === 'Completed'">
+              <p v-if="props.job.evaluation.summary" class="evaluation-summary mb-3">
+                {{ props.job.evaluation.summary }}
+              </p>
+
+              <div class="evaluation-score-grid">
+                <div class="evaluation-score-card">
+                  <span class="evaluation-score-label">OpenAI score</span>
+                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.openAiScore) }}</span>
+                </div>
+                <div class="evaluation-score-card">
+                  <span class="evaluation-score-label">Google score</span>
+                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
+                </div>
+              </div>
+
+              <div class="evaluation-issues-grid mt-3">
+                <div class="issues-panel pa-3">
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-robot" size="small" color="primary" />
+                    <span class="text-body-2 font-weight-medium">OpenAI issues</span>
+                  </div>
+                  <ul v-if="providerIssues('openAi').length" class="issues-list">
+                    <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
+                  </ul>
+                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+                </div>
+
+                <div class="issues-panel pa-3">
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-google" size="small" color="secondary" />
+                    <span class="text-body-2 font-weight-medium">Google issues</span>
+                  </div>
+                  <ul v-if="providerIssues('google').length" class="issues-list">
+                    <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
+                  </ul>
+                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+                </div>
+              </div>
+            </div>
+
+            <p v-else class="evaluation-note mb-0">
+              Evaluation starts after both transcription providers finish.
+            </p>
+          </v-sheet>
+
+          <v-sheet class="comments-panel mt-5 pa-5" border rounded="xl">
+            <div class="d-flex align-center ga-2 mb-3">
+              <v-icon icon="mdi-comment-text-outline" size="small" color="primary" />
+              <span class="text-subtitle-2 font-weight-medium">Human evaluation</span>
+              <v-chip size="small" variant="tonal">{{ comments.length }}</v-chip>
+            </div>
+
+            <v-alert
+              v-if="commentsError"
+              type="error"
+              variant="tonal"
+              class="mb-3"
+            >
+              {{ commentsError }}
+            </v-alert>
+
+            <div class="comments-form mb-4">
+              <v-textarea
+                v-model="commentText"
+                label="Add comment"
+                placeholder="Write your evaluation comment"
+                variant="outlined"
+                density="comfortable"
+                rows="3"
+                auto-grow
+                hide-details="auto"
+                :disabled="savingComment"
+                class="comments-textarea"
+              />
+
+              <div class="comments-form-actions">
+                <v-select
+                  v-model="commentWinnerTag"
+                  :items="winnerTagOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Winner tag"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  :disabled="savingComment"
+                  class="comments-winner-select"
+                />
+
+                <v-btn
+                  color="primary"
+                  prepend-icon="mdi-send-outline"
+                  :loading="savingComment"
+                  :disabled="!commentText.trim()"
+                  @click="submitComment"
+                >
+                  Add comment
+                </v-btn>
+              </div>
+            </div>
+
+            <div v-if="commentsLoading" class="d-flex justify-center py-6">
+              <v-progress-circular indeterminate color="primary" size="28" />
+            </div>
+
+            <div v-else-if="comments.length === 0" class="comments-empty text-medium-emphasis">
+              No comments yet.
+            </div>
+
+            <div v-else class="comments-list">
+              <v-sheet
+                v-for="comment in comments"
+                :key="comment.id"
+                class="comment-item pa-4"
+                border
+                rounded="lg"
+              >
+                <div class="d-flex align-start ga-3">
+                  <div class="flex-grow-1" style="min-width: 0">
+                    <div class="d-flex align-center ga-2 flex-wrap mb-2">
+                      <v-chip
+                        size="x-small"
+                        variant="tonal"
+                        :color="commentWinnerColor(comment.winnerTag)"
+                      >
+                        {{ commentWinnerLabel(comment.winnerTag) }}
+                      </v-chip>
+                      <span class="comment-date">{{ formatDate(comment.createdAt) }}</span>
+                    </div>
+                    <p class="comment-text mb-0">{{ comment.text }}</p>
+                  </div>
+
+                  <v-btn
+                    icon="mdi-delete-outline"
+                    variant="text"
+                    color="error"
+                    size="small"
+                    :loading="deletingCommentId === comment.id"
+                    :disabled="deletingCommentId === comment.id"
+                    @click="removeComment(comment.id)"
+                  />
+                </div>
+              </v-sheet>
+            </div>
+          </v-sheet>
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -427,9 +558,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { createComment, deleteComment, getComments } from '@/services/api'
 import type {
+  CommentWinnerTag,
   EvaluationStatus,
   EvaluationWinner,
+  LyricsVideoComment,
   LyricsVideoEvaluation,
   LyricsVideoJob,
   ProviderResult,
@@ -438,6 +572,14 @@ import type {
 import StatusChip from './StatusChip.vue'
 
 type ProviderKey = 'openAi' | 'google'
+
+const winnerTagOptions: Array<{ title: string; value: CommentWinnerTag }> = [
+  { title: 'OpenAI', value: 'OpenAI' },
+  { title: 'Google', value: 'GoogleCloud' },
+  { title: 'Both', value: 'Both' },
+  { title: 'Not sure', value: 'NotSure' },
+  { title: 'None', value: 'None' },
+]
 
 const props = defineProps<{
   job: LyricsVideoJob
@@ -449,6 +591,15 @@ const emit = defineEmits<{
 }>()
 
 const detailsOpen = ref(false)
+const comments = ref<LyricsVideoComment[]>([])
+const commentsLoading = ref(false)
+const commentsError = ref<string | null>(null)
+const commentText = ref('')
+const commentWinnerTag = ref<CommentWinnerTag>('OpenAI')
+const savingComment = ref(false)
+const deletingCommentId = ref<string | null>(null)
+const humanEvaluatedOverride = ref<boolean | null>(null)
+const humanWinnerOverride = ref<CommentWinnerTag | null>(null)
 
 const sourceLabel = computed(() => {
   return props.job.sourceType === 'UploadedFile' ? 'File upload' : 'BandLab track'
@@ -463,8 +614,75 @@ const dialogTitle = computed(() => {
     || (props.job.sourceType === 'UploadedFile' ? 'Uploaded File' : 'BandLab Track')
 })
 
-function openDetails() {
+const effectiveHumanEvaluated = computed(() => {
+  return humanEvaluatedOverride.value ?? props.job.humanEvaluated ?? false
+})
+
+const effectiveHumanWinner = computed<CommentWinnerTag | null>(() => {
+  return humanWinnerOverride.value ?? props.job.humanWinner ?? null
+})
+
+async function openDetails() {
+  await loadComments()
   detailsOpen.value = true
+}
+
+async function loadComments() {
+  commentsLoading.value = true
+  commentsError.value = null
+
+  try {
+    comments.value = await getComments(props.job.id)
+    if (!props.job.humanEvaluated && comments.value.length > 0) {
+      humanEvaluatedOverride.value = true
+      humanWinnerOverride.value = comments.value[0].winnerTag
+    }
+  } catch (e: any) {
+    commentsError.value = e.message || 'Failed to load comments'
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+async function submitComment() {
+  if (!commentText.value.trim()) {
+    commentsError.value = 'Comment text is required'
+    return
+  }
+
+  savingComment.value = true
+  commentsError.value = null
+
+  try {
+    const created = await createComment(props.job.id, {
+      text: commentText.value.trim(),
+      winnerTag: commentWinnerTag.value,
+    })
+
+    comments.value = [created, ...comments.value]
+    humanEvaluatedOverride.value = true
+    humanWinnerOverride.value = created.winnerTag
+    commentText.value = ''
+    commentWinnerTag.value = 'OpenAI'
+  } catch (e: any) {
+    commentsError.value = e.message || 'Failed to create comment'
+  } finally {
+    savingComment.value = false
+  }
+}
+
+async function removeComment(commentId: string) {
+  deletingCommentId.value = commentId
+  commentsError.value = null
+
+  try {
+    await deleteComment(commentId)
+    comments.value = comments.value.filter(comment => comment.id !== commentId)
+  } catch (e: any) {
+    commentsError.value = e.message || 'Failed to delete comment'
+  } finally {
+    deletingCommentId.value = null
+  }
 }
 
 function isProcessing(result: ProviderResult): boolean {
@@ -484,7 +702,7 @@ function summaryText(result: ProviderResult): string {
     case 'GeneratingVideo':
       return 'Rendering the final video output'
     case 'Completed':
-      return 'Video is ready to preview'
+      return ''
     case 'Failed':
       return result.errorMessage || 'Generation failed'
     default:
@@ -529,12 +747,6 @@ function winnerLabel(winner: EvaluationWinner): string {
     default:
       return 'Both weak'
   }
-}
-
-function isProviderWinner(provider: ProviderKey): boolean {
-  const winner = props.job.evaluation?.winner
-  return (provider === 'openAi' && winner === 'OpenAI')
-    || (provider === 'google' && winner === 'GoogleChirp3')
 }
 
 function providerScore(provider: ProviderKey): number | null {
@@ -602,6 +814,36 @@ function formatDate(dateStr: string): string {
     minute: '2-digit',
   })
 }
+
+function commentWinnerLabel(tag: CommentWinnerTag): string {
+  switch (tag) {
+    case 'OpenAI':
+      return 'OpenAI'
+    case 'GoogleCloud':
+      return 'Google'
+    case 'Both':
+      return 'Both'
+    case 'NotSure':
+      return 'Not sure'
+    default:
+      return 'None'
+  }
+}
+
+function commentWinnerColor(tag: CommentWinnerTag): string {
+  switch (tag) {
+    case 'OpenAI':
+      return 'primary'
+    case 'GoogleCloud':
+      return 'secondary'
+    case 'Both':
+      return 'success'
+    case 'NotSure':
+      return 'warning'
+    default:
+      return 'default'
+  }
+}
 </script>
 
 <style scoped>
@@ -615,7 +857,7 @@ function formatDate(dateStr: string): string {
 
 .job-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, auto) minmax(120px, auto) auto auto;
   align-items: start;
   gap: 20px;
 }
@@ -680,6 +922,79 @@ function formatDate(dateStr: string): string {
   font-size: 12px;
   line-height: 1.2;
   font-weight: 500;
+}
+
+.job-genre-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: start;
+  min-width: 110px;
+}
+
+.job-genre-label {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-weight: 600;
+}
+
+.job-genre-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-secondary), 0.1);
+  color: rgba(var(--v-theme-on-surface), 0.8);
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.job-genre-pill :deep(.v-icon) {
+  opacity: 0.76;
+}
+
+.job-human-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  align-self: start;
+  min-width: 150px;
+}
+
+.job-human-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.job-human-label {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-weight: 600;
+}
+
+.job-human-info {
+  color: rgba(var(--v-theme-on-surface), 0.46);
+  cursor: help;
+}
+
+.job-human-chip {
+  max-width: 100%;
+}
+
+.job-human-empty {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.42);
+  font-weight: 600;
 }
 
 .job-statuses {
@@ -769,6 +1084,60 @@ function formatDate(dateStr: string): string {
 
 .details-panel {
   height: 100%;
+}
+
+.comments-panel {
+  background: rgba(var(--v-theme-surface), 0.98);
+}
+
+.comments-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comments-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.comments-textarea {
+  width: 100%;
+}
+
+.comments-winner-select {
+  max-width: 220px;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comments-empty {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.comment-item {
+  background: rgba(var(--v-theme-on-surface), 0.02);
+}
+
+.comment-date {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-weight: 500;
+}
+
+.comment-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(var(--v-theme-on-surface), 0.82);
 }
 
 .details-body {
@@ -947,6 +1316,15 @@ function formatDate(dateStr: string): string {
 
   .evaluation-issues-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comments-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .comments-winner-select {
+    max-width: none;
   }
 }
 </style>

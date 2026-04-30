@@ -1,4 +1,11 @@
-import type { LyricsVideoJob, LyricsVideoListResponse, TriggerResponse } from '@/types/lyricsVideo'
+import type {
+  CommentWinnerTag,
+  LyricsVideoComment,
+  LyricsVideoCommentsResponse,
+  LyricsVideoJob,
+  LyricsVideoListResponse,
+  TriggerResponse,
+} from '@/types/lyricsVideo'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://bl-uat-fn-video-previews.azurewebsites.net/api'
 
@@ -65,6 +72,28 @@ export async function getJobById(jobId: string): Promise<LyricsVideoJob> {
 
 export async function deleteJob(jobId: string): Promise<{ message: string }> {
   return request<{ message: string }>(`/lyrics-video/${jobId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getComments(jobId: string): Promise<LyricsVideoComment[]> {
+  const data = await request<LyricsVideoCommentsResponse>(`/lyrics-video/${jobId}/comments`)
+  return data.items
+}
+
+export async function createComment(
+  jobId: string,
+  payload: { text: string; winnerTag: CommentWinnerTag },
+): Promise<LyricsVideoComment> {
+  return request<LyricsVideoComment>(`/lyrics-video/${jobId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteComment(commentId: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/lyrics-video/comments/${commentId}`, {
     method: 'DELETE',
   })
 }
