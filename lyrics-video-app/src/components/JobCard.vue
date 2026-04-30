@@ -750,6 +750,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   remove: [jobId: string]
   genreUpdated: [payload: { jobId: string; genreSlug: string; genreName: string }]
+  reviewUpdated: [payload: { jobId: string; provider: 'openAi' | 'google'; review: LyricsVideoProviderReview | null }]
 }>()
 
 const detailsOpen = ref(false)
@@ -887,6 +888,12 @@ async function saveReview(provider: ProviderKey) {
       googleReviewStatus.value = savedReview.status
       googleReviewText.value = savedReview.text ?? ''
     }
+
+    emit('reviewUpdated', {
+      jobId: props.job.id,
+      provider,
+      review: savedReview,
+    })
   } catch (e: any) {
     const message = e.message || 'Failed to save review'
     if (provider === 'openAi') {
@@ -920,6 +927,12 @@ async function clearReview(provider: ProviderKey) {
       googleReviewStatus.value = 'Good'
       googleReviewText.value = ''
     }
+
+    emit('reviewUpdated', {
+      jobId: props.job.id,
+      provider,
+      review: null,
+    })
   } catch (e: any) {
     const message = e.message || 'Failed to clear review'
     if (provider === 'openAi') {

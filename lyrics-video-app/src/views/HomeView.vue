@@ -104,7 +104,7 @@
               <v-chip size="small" color="primary" variant="tonal">
                 {{ filteredJobs.length }}
               </v-chip>
-              <v-chip v-if="selectedGenreFilter !== ALL_GENRES" size="small" variant="text">
+              <v-chip v-if="hasActiveFilters" size="small" variant="text">
                 {{ jobs.length }} total
               </v-chip>
             </div>
@@ -119,7 +119,19 @@
                 variant="outlined"
                 density="comfortable"
                 hide-details
-                class="jobs-genre-filter"
+                class="jobs-filter-select"
+              />
+
+              <v-select
+                v-model="selectedHumanReviewFilter"
+                :items="humanReviewFilterOptions"
+                item-title="title"
+                item-value="value"
+                label="Filter by human review"
+                variant="outlined"
+                density="comfortable"
+                hide-details
+                class="jobs-filter-select"
               />
 
               <v-btn
@@ -153,7 +165,7 @@
 
           <div v-else-if="filteredJobs.length === 0" class="text-center py-12 text-medium-emphasis">
             <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-filter-outline</v-icon>
-            <p class="text-body-1">No jobs match the selected genre.</p>
+            <p class="text-body-1">No jobs match the selected filters.</p>
           </div>
 
           <div v-else class="d-flex flex-column ga-4">
@@ -164,6 +176,7 @@
               :deleting="deletingJobId === job.id"
               @remove="handleDelete"
               @genre-updated="handleGenreUpdated"
+              @review-updated="handleReviewUpdated"
             />
           </div>
         </div>
@@ -179,14 +192,42 @@
               <span class="text-subtitle-2 font-weight-medium">Global AI evaluation scores</span>
             </div>
 
+            <p v-if="globalScoreBars.length" class="scores-overview-note mb-3">
+              Higher bars mean better average evaluation across all reviewed jobs.
+            </p>
+
+            <div v-if="globalScoreBars.length" class="scores-overview-bars mb-4">
+              <div
+                v-for="scoreBar in globalScoreBars"
+                :key="scoreBar.id"
+                class="scores-overview-bar-card"
+              >
+                <div class="scores-overview-bar-header mb-2">
+                  <div class="d-flex align-center ga-2 flex-wrap">
+                    <span class="scores-overview-label">{{ scoreBar.label }}</span>
+                    <span class="scores-overview-bar-value">{{ formatAverage(scoreBar.value) }}</span>
+                  </div>
+                </div>
+
+                <v-progress-linear
+                  :model-value="scoreBar.percent"
+                  :color="scoreBar.color"
+                  bg-color="grey-lighten-3"
+                  rounded
+                  height="14"
+                />
+
+                <div class="scores-overview-bar-scale mt-2">
+                  <span>0</span>
+                  <span>10</span>
+                </div>
+              </div>
+            </div>
+
             <div class="scores-overview-grid">
               <div class="scores-overview-card">
-                <span class="scores-overview-label">OpenAI average</span>
-                <span class="scores-overview-value">{{ formatAverage(averages?.openAiAverage) }}</span>
-              </div>
-              <div class="scores-overview-card">
-                <span class="scores-overview-label">Google average</span>
-                <span class="scores-overview-value">{{ formatAverage(averages?.googleChirpAverage) }}</span>
+                <span class="scores-overview-label">Compared on</span>
+                <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }} jobs</span>
               </div>
               <div class="scores-overview-card">
                 <span class="scores-overview-label">Evaluated jobs</span>
@@ -204,18 +245,23 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
-import type { LyricsVideoJob } from '@/types/lyricsVideo'
+import type { LyricsVideoJob, LyricsVideoProviderReview, ProviderReviewStatus } from '@/types/lyricsVideo'
 
 const { jobs, averages, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
 
 const ALL_GENRES = '__all__'
 const NO_GENRE = '__no-genre__'
+const ALL_HUMAN_REVIEWS = '__all-human-reviews__'
+const NOT_REVIEWED = '__not-reviewed__'
+
+type HumanReviewFilterValue = ProviderReviewStatus | typeof ALL_HUMAN_REVIEWS | typeof NOT_REVIEWED
 
 const inputTab = ref('url')
 const urlForm = ref<{ resetValidation: () => void } | null>(null)
 const trackUrl = ref('')
 const selectedFile = ref<File | undefined>()
 const selectedGenreFilter = ref(ALL_GENRES)
+const selectedHumanReviewFilter = ref<HumanReviewFilterValue>(ALL_HUMAN_REVIEWS)
 
 const rules = {
   required: (v: string) => !!v || 'Track URL is required',
@@ -232,10 +278,43 @@ const hasGlobalScores = computed(() => {
     || averages.value?.evaluatedCount != null
 })
 
+const hasActiveFilters = computed(() => {
+  return selectedGenreFilter.value !== ALL_GENRES
+    || selectedHumanReviewFilter.value !== ALL_HUMAN_REVIEWS
+})
+
+const globalScoreBars = computed(() => {
+  const bars = [
+    {
+      id: 'openAi',
+      label: 'OpenAI',
+      value: averages.value?.openAiAverage ?? null,
+      color: 'primary',
+    },
+    {
+      id: 'googleChirp',
+      label: 'Google',
+      value: averages.value?.googleChirpAverage ?? null,
+      color: 'secondary',
+    },
+  ]
+
+  return bars
+    .filter((bar) => bar.value != null)
+    .map((bar) => ({
+      ...bar,
+      percent: scoreToPercent(bar.value),
+    }))
+})
+
 const genreCounts = computed(() => {
   const counts = new Map<string, { value: string; genreName: string; count: number }>()
 
   for (const job of jobs.value) {
+    if (!matchesHumanReviewFilter(job, selectedHumanReviewFilter.value)) {
+      continue
+    }
+
     const value = job.metadata?.genreSlug ?? NO_GENRE
     const genreName = job.metadata?.genreName ?? 'No genre'
     const existing = counts.get(value)
@@ -258,10 +337,10 @@ const genreCounts = computed(() => {
 const genreFilterOptions = computed(() => {
   return [
     {
-      title: `All genres (${jobs.value.length})`,
+      title: `All genres (${jobs.value.filter(job => matchesHumanReviewFilter(job, selectedHumanReviewFilter.value)).length})`,
       value: ALL_GENRES,
       genreName: 'All genres',
-      count: jobs.value.length,
+      count: jobs.value.filter(job => matchesHumanReviewFilter(job, selectedHumanReviewFilter.value)).length,
     },
     ...genreCounts.value.map(genre => ({
       title: `${genre.genreName} (${genre.count})`,
@@ -272,16 +351,86 @@ const genreFilterOptions = computed(() => {
   ]
 })
 
-const filteredJobs = computed(() => {
-  if (selectedGenreFilter.value === ALL_GENRES) {
-    return jobs.value
-  }
+const humanReviewFilterOptions = computed(() => {
+  const jobsInSelectedGenre = jobs.value.filter(job => matchesGenreFilter(job, selectedGenreFilter.value))
 
+  const options: Array<{ label: string; value: HumanReviewFilterValue; count: number }> = [
+    {
+      label: 'All reviews',
+      value: ALL_HUMAN_REVIEWS,
+      count: jobsInSelectedGenre.length,
+    },
+    {
+      label: 'Great',
+      value: 'Great',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Great')).length,
+    },
+    {
+      label: 'Good',
+      value: 'Good',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Good')).length,
+    },
+    {
+      label: 'Bad',
+      value: 'Bad',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Bad')).length,
+    },
+    {
+      label: 'Not sure',
+      value: 'NotSure',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'NotSure')).length,
+    },
+    {
+      label: 'Not reviewed',
+      value: NOT_REVIEWED,
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, NOT_REVIEWED)).length,
+    },
+  ]
+
+  return options.map(option => ({
+    ...option,
+    title: `${option.label} (${option.count})`,
+  }))
+})
+
+const filteredJobs = computed(() => {
   return jobs.value.filter(job => {
-    const genreSlug = job.metadata?.genreSlug ?? NO_GENRE
-    return genreSlug === selectedGenreFilter.value
+    return matchesGenreFilter(job, selectedGenreFilter.value)
+      && matchesHumanReviewFilter(job, selectedHumanReviewFilter.value)
   })
 })
+
+function matchesGenreFilter(job: LyricsVideoJob, filterValue: string): boolean {
+  if (filterValue === ALL_GENRES) {
+    return true
+  }
+
+  const genreSlug = job.metadata?.genreSlug ?? NO_GENRE
+  return genreSlug === filterValue
+}
+
+function matchesHumanReviewFilter(job: LyricsVideoJob, filterValue: HumanReviewFilterValue): boolean {
+  if (filterValue === ALL_HUMAN_REVIEWS) {
+    return true
+  }
+
+  const openAiReview = job.openAiApproval?.status ?? null
+  const googleReview = job.googleCloudApproval?.status ?? null
+
+  if (filterValue === NOT_REVIEWED) {
+    return openAiReview == null || googleReview == null
+  }
+
+  return openAiReview === filterValue || googleReview === filterValue
+}
+
+function scoreToPercent(value?: number | null): number {
+  if (value == null) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, (value / 10) * 100))
+}
 
 function formatAverage(value?: number | null): string {
   return value == null ? '--' : `${value.toFixed(1)}/10`
@@ -329,6 +478,24 @@ function handleGenreUpdated(payload: { jobId: string; genreSlug: string; genreNa
   })
 }
 
+function handleReviewUpdated(payload: {
+  jobId: string
+  provider: 'openAi' | 'google'
+  review: LyricsVideoProviderReview | null
+}) {
+  jobs.value = jobs.value.map((job: LyricsVideoJob) => {
+    if (job.id !== payload.jobId) {
+      return job
+    }
+
+    return {
+      ...job,
+      openAiApproval: payload.provider === 'openAi' ? payload.review : job.openAiApproval,
+      googleCloudApproval: payload.provider === 'google' ? payload.review : job.googleCloudApproval,
+    }
+  })
+}
+
 onMounted(loadJobs)
 </script>
 
@@ -358,7 +525,7 @@ onMounted(loadJobs)
   flex-wrap: wrap;
 }
 
-.jobs-genre-filter {
+.jobs-filter-select {
   min-width: 240px;
   max-width: 320px;
 }
@@ -382,6 +549,49 @@ onMounted(loadJobs)
 
 .scores-overview {
   background: rgba(var(--v-theme-surface), 0.98);
+}
+
+.scores-overview-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(var(--v-theme-on-surface), 0.64);
+}
+
+.scores-overview-bars {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.scores-overview-bar-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.scores-overview-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scores-overview-bar-value {
+  font-size: 13px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.86);
+  font-weight: 700;
+}
+
+.scores-overview-bar-scale {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.52);
+  font-weight: 600;
 }
 
 .scores-overview-grid {
@@ -424,6 +634,11 @@ onMounted(loadJobs)
     width: auto;
     margin-top: 16px;
   }
+
+  .scores-overview-bar-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 720px) {
@@ -432,7 +647,7 @@ onMounted(loadJobs)
     align-items: stretch;
   }
 
-  .jobs-genre-filter {
+  .jobs-filter-select {
     min-width: 0;
     max-width: none;
     width: 100%;
