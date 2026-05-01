@@ -237,51 +237,6 @@
             </p>
           </v-sheet>
 
-          <v-sheet class="genre-editor-panel mb-5 pa-4" border rounded="xl">
-            <div class="d-flex align-center ga-2 mb-3">
-              <v-icon icon="mdi-shape-outline" size="small" color="primary" />
-              <span class="text-body-1 font-weight-medium">Genre</span>
-            </div>
-
-            <p class="evaluation-note mb-3">
-              Update genre in case it is not matching the actual audio.
-            </p>
-
-            <v-alert
-              v-if="genreError"
-              type="error"
-              variant="tonal"
-              class="mb-3"
-            >
-              {{ genreError }}
-            </v-alert>
-
-            <div class="genre-editor-controls">
-              <v-select
-                v-model="selectedGenreSlug"
-                :items="genreOptions"
-                item-title="title"
-                item-value="value"
-                label="Genre"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                :disabled="savingGenre"
-                class="genre-editor-select"
-              />
-
-              <v-btn
-                color="primary"
-                prepend-icon="mdi-content-save-outline"
-                :loading="savingGenre"
-                :disabled="!selectedGenreSlug || !hasGenreChanged"
-                @click="saveGenre"
-              >
-                Update genre
-              </v-btn>
-            </div>
-          </v-sheet>
-
           <v-row class="details-provider-row" dense>
             <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
@@ -380,15 +335,15 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="primary" />
-                    <span class="text-body-2 font-weight-medium">Current review</span>
+                    <span class="text-body-2 font-weight-medium">Human review</span>
+                    <v-spacer />
                     <v-chip
-                      v-if="providerReview('openAi')"
                       size="x-small"
                       variant="tonal"
-                      :color="reviewStatusColor(providerReview('openAi')!.status)"
-                      :prepend-icon="reviewStatusIcon(providerReview('openAi')!.status)"
+                      :color="reviewStatusBadgeColor('openAi')"
+                      :prepend-icon="reviewStatusBadgeIcon('openAi')"
                     >
-                      {{ reviewStatusLabel(providerReview('openAi')!.status) }}
+                      {{ reviewStatusBadgeLabel('openAi') }}
                     </v-chip>
                   </div>
 
@@ -472,7 +427,7 @@
                           :disabled="isClearingReview('openAi')"
                           @click="saveReview('openAi')"
                         >
-                          {{ providerReview('openAi') ? 'Update human review' : 'Save human review' }}
+                          Submit Review
                         </v-btn>
                       </div>
                     </div>
@@ -579,15 +534,15 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="secondary" />
-                    <span class="text-body-2 font-weight-medium">Current review</span>
+                    <span class="text-body-2 font-weight-medium">Human review</span>
+                    <v-spacer />
                     <v-chip
-                      v-if="providerReview('google')"
                       size="x-small"
                       variant="tonal"
-                      :color="reviewStatusColor(providerReview('google')!.status)"
-                      :prepend-icon="reviewStatusIcon(providerReview('google')!.status)"
+                      :color="reviewStatusBadgeColor('google')"
+                      :prepend-icon="reviewStatusBadgeIcon('google')"
                     >
-                      {{ reviewStatusLabel(providerReview('google')!.status) }}
+                      {{ reviewStatusBadgeLabel('google') }}
                     </v-chip>
                   </div>
 
@@ -671,7 +626,7 @@
                           :disabled="isClearingReview('google')"
                           @click="saveReview('google')"
                         >
-                          {{ providerReview('google') ? 'Update human review' : 'Save human review' }}
+                          Submit Review
                         </v-btn>
                       </div>
                     </div>
@@ -690,7 +645,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { clearProviderReview, setProviderReview, updateGenre } from '@/services/api'
+import { clearProviderReview, setProviderReview } from '@/services/api'
 import type {
   EvaluationStatus,
   EvaluationWinner,
@@ -705,40 +660,11 @@ import StatusChip from './StatusChip.vue'
 
 type ProviderKey = 'openAi' | 'google'
 type ReviewEndpoint = 'openai' | 'google-cloud'
-type GenreMetadata = { genreSlug?: string | null; genreName?: string | null }
-
-const genreOptions: Array<{ title: string; value: string }> = [
-  { title: 'Rock', value: 'rock' },
-  { title: 'Pop', value: 'pop' },
-  { title: 'Hip Hop', value: 'hip-hop' },
-  { title: 'R&B & Soul', value: 'r-n-b' },
-  { title: 'Electronic', value: 'electronic' },
-  { title: 'Jazz', value: 'jazz' },
-  { title: 'Folk', value: 'folk' },
-  { title: 'Latin', value: 'latin' },
-  { title: 'Classical', value: 'classical' },
-  { title: 'Funk', value: 'funk' },
-  { title: 'Blues', value: 'blues' },
-  { title: 'Other', value: 'other' },
-  { title: 'Metal', value: 'metal' },
-  { title: 'Country', value: 'country' },
-  { title: 'Reggae', value: 'reggae' },
-  { title: 'Christian & Gospel', value: 'christian-and-gospel' },
-  { title: 'K-Pop', value: 'k-pop' },
-  { title: 'Progresive Rock', value: 'progressive-rock' },
-  { title: 'Afro', value: 'afro' },
-  { title: 'House', value: 'house' },
-  { title: 'Dance & EDM', value: 'dance-and-edm' },
-  { title: 'Trap', value: 'trap' },
-  { title: 'Punk', value: 'punk' },
-  { title: 'Lofi', value: 'lofi' },
-  { title: 'Dancehall', value: 'dancehall' },
-]
 
 const reviewStatusOptions: Array<{ title: string; value: ProviderReviewStatus; icon: string }> = [
-  { title: 'Approved', value: 'Approved', icon: 'mdi-check-circle-outline' },
-  { title: 'Rejected', value: 'Rejected', icon: 'mdi-close-circle-outline' },
-  { title: 'Not sure', value: 'NotSure', icon: 'mdi-help-circle-outline' },
+  { title: 'Approve', value: 'Approved', icon: 'mdi-check-circle-outline' },
+  { title: 'Reject', value: 'Rejected', icon: 'mdi-close-circle-outline' },
+  { title: 'NotSure', value: 'NotSure', icon: 'mdi-help-circle-outline' },
 ]
 
 const props = defineProps<{
@@ -748,7 +674,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   remove: [jobId: string]
-  genreUpdated: [payload: { jobId: string; genreSlug: string; genreName: string }]
   reviewUpdated: [payload: { jobId: string; provider: 'openAi' | 'google'; review: LyricsVideoProviderReview | null }]
 }>()
 
@@ -763,10 +688,6 @@ const savingReviewProvider = ref<ProviderKey | null>(null)
 const clearingReviewProvider = ref<ProviderKey | null>(null)
 const openAiReviewOverride = ref<LyricsVideoProviderReview | null | undefined>(undefined)
 const googleReviewOverride = ref<LyricsVideoProviderReview | null | undefined>(undefined)
-const selectedGenreSlug = ref('')
-const genreError = ref<string | null>(null)
-const savingGenre = ref(false)
-const genreOverride = ref<GenreMetadata | undefined>(undefined)
 
 const sourceLabel = computed(() => {
   return props.job.sourceType === 'UploadedFile' ? 'File upload' : 'BandLab track'
@@ -781,31 +702,13 @@ const dialogTitle = computed(() => {
     || (props.job.sourceType === 'UploadedFile' ? 'Uploaded File' : 'BandLab Track')
 })
 
-const effectiveGenreSlug = computed(() => {
-  return genreOverride.value === undefined
-    ? props.job.metadata?.genreSlug ?? null
-    : genreOverride.value.genreSlug ?? null
-})
-
 const effectiveGenreName = computed(() => {
-  return genreOverride.value === undefined
-    ? props.job.metadata?.genreName ?? null
-    : genreOverride.value.genreName ?? null
-})
-
-const hasGenreChanged = computed(() => {
-  return selectedGenreSlug.value !== (effectiveGenreSlug.value ?? '')
+  return props.job.metadata?.genreName ?? null
 })
 
 function openDetails() {
   syncReviewForms()
-  syncGenreForm()
   detailsOpen.value = true
-}
-
-function syncGenreForm() {
-  selectedGenreSlug.value = effectiveGenreSlug.value ?? ''
-  genreError.value = null
 }
 
 function syncReviewForms() {
@@ -944,34 +847,6 @@ async function clearReview(provider: ProviderKey) {
   }
 }
 
-async function saveGenre() {
-  if (!selectedGenreSlug.value) {
-    genreError.value = 'Genre is required'
-    return
-  }
-
-  savingGenre.value = true
-  genreError.value = null
-
-  try {
-    const updatedGenre = await updateGenre(props.job.id, {
-      genreSlug: selectedGenreSlug.value,
-    })
-
-    genreOverride.value = updatedGenre
-    selectedGenreSlug.value = updatedGenre.genreSlug
-    emit('genreUpdated', {
-      jobId: props.job.id,
-      genreSlug: updatedGenre.genreSlug,
-      genreName: updatedGenre.genreName,
-    })
-  } catch (e: any) {
-    genreError.value = e.message || 'Failed to update genre'
-  } finally {
-    savingGenre.value = false
-  }
-}
-
 function isProcessing(result: ProviderResult): boolean {
   return result.status === 'Transcribing' || result.status === 'GeneratingVideo'
 }
@@ -1058,6 +933,35 @@ function providerIssues(provider: ProviderKey): string[] {
     : evaluation.googleChirpIssues ?? []
 }
 
+function reviewStatusBadgeLabel(provider: ProviderKey): string {
+  const review = providerReview(provider)
+
+  if (!review) {
+    return 'Not reviewed'
+  }
+
+  switch (review.status) {
+    case 'Approved':
+      return 'Approved'
+    case 'Rejected':
+      return 'Rejected'
+    default:
+      return 'NotSure'
+  }
+}
+
+function reviewStatusBadgeColor(provider: ProviderKey): string {
+  const review = providerReview(provider)
+
+  return review ? reviewStatusColor(review.status) : 'grey-darken-1'
+}
+
+function reviewStatusBadgeIcon(provider: ProviderKey): string {
+  const review = providerReview(provider)
+
+  return review ? reviewStatusIcon(review.status) : 'mdi-account-clock-outline'
+}
+
 function reviewStatusLabel(status: ProviderReviewStatus): string {
   switch (status) {
     case 'Approved':
@@ -1142,9 +1046,9 @@ function formatDate(dateStr: string): string {
 .job-card {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 255, 0.98) 100%),
+    linear-gradient(180deg, rgba(var(--v-theme-surface), 0.98) 0%, rgba(var(--v-theme-surface), 0.92) 100%),
     rgba(var(--v-theme-surface), 1);
-  box-shadow: 0 14px 30px rgba(38, 57, 77, 0.06);
+  box-shadow: 0 14px 30px rgba(6, 10, 20, 0.18);
 }
 
 .job-row {
@@ -1159,7 +1063,7 @@ function formatDate(dateStr: string): string {
 }
 
 .job-avatar {
-  box-shadow: 0 8px 18px rgba(38, 57, 77, 0.12);
+  box-shadow: 0 8px 18px rgba(6, 10, 20, 0.2);
 }
 
 .job-source-chip {
@@ -1267,13 +1171,14 @@ function formatDate(dateStr: string): string {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   border-radius: 14px;
   background: rgba(var(--v-theme-surface), 0.96);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(6, 10, 20, 0.12);
 }
 
 .job-status-label {
   font-size: 12px;
   line-height: 1.2;
-  color: rgba(var(--v-theme-on-surface), 0.56);
   font-weight: 600;
 }
 
@@ -1328,8 +1233,8 @@ function formatDate(dateStr: string): string {
   background: rgba(var(--v-theme-surface), 0.985);
   border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 14px 30px rgba(38, 57, 77, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 28px rgba(6, 10, 20, 0.16);
 }
 
 .details-panel {
@@ -1341,9 +1246,9 @@ function formatDate(dateStr: string): string {
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-surface), 0.64);
+  background: rgba(var(--v-theme-surface), 0.82);
   backdrop-filter: blur(4px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .details-section-header--openai {
@@ -1351,7 +1256,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-primary), 0.24);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .details-section-header--google {
@@ -1359,7 +1264,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-primary), 0.24);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .details-section-header--evaluation {
@@ -1367,7 +1272,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-warning), 0.26);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-warning), 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .provider-review-panel {
@@ -1412,23 +1317,6 @@ function formatDate(dateStr: string): string {
   line-height: 1.2;
   color: rgba(var(--v-theme-on-surface), 0.56);
   font-weight: 500;
-}
-
-.genre-editor-panel {
-  background: rgba(var(--v-theme-on-surface), 0.02);
-}
-
-.genre-editor-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.genre-editor-select {
-  flex: 1 1 260px;
-  min-width: 240px;
-  max-width: 360px;
 }
 
 .details-body {
@@ -1625,15 +1513,5 @@ function formatDate(dateStr: string): string {
     max-width: none;
   }
 
-  .genre-editor-controls {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .genre-editor-select {
-    min-width: 0;
-    max-width: none;
-    width: 100%;
-  }
 }
 </style>

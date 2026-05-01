@@ -175,7 +175,6 @@
               :job="job"
               :deleting="deletingJobId === job.id"
               @remove="handleDelete"
-              @genre-updated="handleGenreUpdated"
               @review-updated="handleReviewUpdated"
             />
           </div>
@@ -596,23 +595,6 @@ async function handleDelete(jobId: string) {
   if (!confirmed) return
 
   await removeJob(jobId)
-}
-
-function handleGenreUpdated(payload: { jobId: string; genreSlug: string; genreName: string }) {
-  jobs.value = jobs.value.map((job: LyricsVideoJob) => {
-    if (job.id !== payload.jobId) {
-      return job
-    }
-
-    return {
-      ...job,
-      metadata: {
-        ...(job.metadata ?? {}),
-        genreSlug: payload.genreSlug,
-        genreName: payload.genreName,
-      },
-    }
-  })
 }
 
 function handleReviewUpdated(payload: {
