@@ -93,7 +93,7 @@
 
     <!-- Jobs List -->
     <template v-else>
-      <div class="jobs-layout" :class="{ 'jobs-layout--with-sidebar': hasGlobalScores }">
+      <div class="jobs-layout" :class="{ 'jobs-layout--with-sidebar': hasSidebarStats }">
         <div class="jobs-main">
           <div class="jobs-toolbar mb-4">
             <div class="d-flex align-center ga-2 flex-wrap">
@@ -181,8 +181,9 @@
           </div>
         </div>
 
-        <aside v-if="hasGlobalScores" class="jobs-sidebar">
+        <aside v-if="hasSidebarStats" class="jobs-sidebar">
           <v-sheet
+            v-if="hasGlobalScores"
             class="pa-4 scores-overview"
             border
             rounded="xl"
@@ -235,6 +236,64 @@
               </div>
             </div>
           </v-sheet>
+
+          <v-sheet
+            v-if="hasHumanStats"
+            class="pa-4 human-stats-overview"
+            border
+            rounded="xl"
+          >
+            <div class="d-flex align-center ga-2 flex-wrap mb-3">
+              <v-icon color="primary">mdi-account-check-outline</v-icon>
+              <span class="text-subtitle-2 font-weight-medium">Human evaluation summary</span>
+            </div>
+
+            <p class="scores-overview-note mb-3">
+              Human approval breakdown per provider.
+            </p>
+
+            <div v-if="humanOutcomeCards.length" class="human-outcome-grid mb-4">
+              <div
+                v-for="outcome in humanOutcomeCards"
+                :key="outcome.id"
+                class="human-outcome-card"
+                :style="{ borderColor: outcome.colorCss }"
+              >
+                <span class="human-outcome-label">{{ outcome.label }}</span>
+                <span class="human-outcome-value">{{ outcome.value }}</span>
+              </div>
+            </div>
+
+            <div v-if="humanProviderBars.length" class="human-provider-stats">
+              <div
+                v-for="provider in humanProviderBars"
+                :key="provider.id"
+                class="human-provider-card"
+              >
+                <div class="human-provider-header mb-2">
+                  <span class="scores-overview-label">{{ provider.label }}</span>
+                  <span class="human-provider-total">{{ provider.total }} reviews</span>
+                </div>
+
+                <div class="human-provider-metrics mt-3">
+                  <div
+                    v-for="segment in provider.segments"
+                    :key="segment.id"
+                    class="human-provider-metric"
+                    :style="{ borderColor: segment.colorCss }"
+                  >
+                    <span class="human-provider-metric-label">{{ segment.label }}</span>
+                    <span class="human-provider-metric-value">{{ segment.count }}</span>
+                    <span class="human-provider-metric-share">{{ formatPercent(segment.percent) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p v-else class="scores-overview-note mb-0">
+              No human reviews yet.
+            </p>
+          </v-sheet>
         </aside>
       </div>
     </template>
@@ -245,9 +304,14 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useLyricsJobs } from '@/composables/useLyricsJobs'
 import JobCard from '@/components/JobCard.vue'
-import type { LyricsVideoJob, LyricsVideoProviderReview, ProviderReviewStatus } from '@/types/lyricsVideo'
+import type {
+  LyricsVideoHumanApprovalStats,
+  LyricsVideoJob,
+  LyricsVideoProviderReview,
+  ProviderReviewStatus,
+} from '@/types/lyricsVideo'
 
-const { jobs, averages, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
+const { jobs, averages, humanStats, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
 
 const ALL_GENRES = '__all__'
 const NO_GENRE = '__no-genre__'
@@ -278,6 +342,14 @@ const hasGlobalScores = computed(() => {
     || averages.value?.evaluatedCount != null
 })
 
+const hasHumanStats = computed(() => {
+  return humanStats.value != null
+})
+
+const hasSidebarStats = computed(() => {
+  return hasGlobalScores.value || hasHumanStats.value
+})
+
 const hasActiveFilters = computed(() => {
   return selectedGenreFilter.value !== ALL_GENRES
     || selectedHumanReviewFilter.value !== ALL_HUMAN_REVIEWS
@@ -305,6 +377,38 @@ const globalScoreBars = computed(() => {
       ...bar,
       percent: scoreToPercent(bar.value),
     }))
+})
+
+const humanOutcomeCards = computed(() => {
+  if (!humanStats.value) {
+    return []
+  }
+
+  const outcomes = [
+    { id: 'openAI', label: 'OpenAI wins', value: humanStats.value.openAI ?? 0, color: 'primary' },
+    { id: 'googleCloud', label: 'Google wins', value: humanStats.value.googleCloud ?? 0, color: 'secondary' },
+    { id: 'both', label: 'Both', value: humanStats.value.both ?? 0, color: 'info' },
+    { id: 'none', label: 'None', value: humanStats.value.none ?? 0, color: 'error' },
+    { id: 'notSure', label: 'Not sure', value: humanStats.value.notSure ?? 0, color: 'warning' },
+  ]
+
+  return outcomes
+    .filter(outcome => outcome.value > 0)
+    .map(outcome => ({
+      ...outcome,
+      colorCss: themeColorCss(outcome.color),
+    }))
+})
+
+const humanProviderBars = computed(() => {
+  if (!humanStats.value) {
+    return []
+  }
+
+  return [
+    createHumanProviderBar('openAi', 'OpenAI approval status', humanStats.value.openAiApproval),
+    createHumanProviderBar('googleCloud', 'Google approval status', humanStats.value.googleCloudApproval),
+  ].filter(provider => provider.total > 0)
 })
 
 const genreCounts = computed(() => {
@@ -361,19 +465,14 @@ const humanReviewFilterOptions = computed(() => {
       count: jobsInSelectedGenre.length,
     },
     {
-      label: 'Great',
-      value: 'Great',
-      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Great')).length,
+      label: 'Approved',
+      value: 'Approved',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Approved')).length,
     },
     {
-      label: 'Good',
-      value: 'Good',
-      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Good')).length,
-    },
-    {
-      label: 'Bad',
-      value: 'Bad',
-      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Bad')).length,
+      label: 'Rejected',
+      value: 'Rejected',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Rejected')).length,
     },
     {
       label: 'Not sure',
@@ -432,8 +531,46 @@ function scoreToPercent(value?: number | null): number {
   return Math.max(0, Math.min(100, (value / 10) * 100))
 }
 
+function createHumanProviderBar(
+  id: string,
+  label: string,
+  stats?: LyricsVideoHumanApprovalStats | null,
+) {
+  const rawSegments = [
+    { id: 'approved', label: 'Approved', count: stats?.approved ?? 0, color: 'success' },
+    { id: 'rejected', label: 'Rejected', count: stats?.rejected ?? 0, color: 'error' },
+    { id: 'notSure', label: 'Not sure', count: stats?.notSure ?? 0, color: 'warning' },
+  ]
+
+  const fallbackTotal = rawSegments.reduce((sum, segment) => sum + segment.count, 0)
+  const total = stats?.total && stats.total > 0 ? stats.total : fallbackTotal
+
+  return {
+    id,
+    label,
+    total,
+    segments: rawSegments.map(segment => ({
+      ...segment,
+      percent: total > 0 ? (segment.count / total) * 100 : 0,
+      colorCss: themeColorCss(segment.color),
+    })),
+  }
+}
+
+function themeColorCss(color: string): string {
+  return `rgb(var(--v-theme-${color}))`
+}
+
 function formatAverage(value?: number | null): string {
   return value == null ? '--' : `${value.toFixed(1)}/10`
+}
+
+function formatPercent(value?: number | null): string {
+  if (value == null) {
+    return '--'
+  }
+
+  return `${Math.round(value)}%`
 }
 
 async function handleUrlSubmit() {
@@ -545,9 +682,13 @@ onMounted(loadJobs)
   top: 24px;
   left: calc(100% + 20px);
   width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.scores-overview {
+.scores-overview,
+.human-stats-overview {
   background: rgba(var(--v-theme-surface), 0.98);
 }
 
@@ -600,6 +741,102 @@ onMounted(loadJobs)
   gap: 12px;
 }
 
+.human-outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.human-outcome-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  border-left-width: 4px;
+}
+
+.human-outcome-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
+}
+
+.human-outcome-value {
+  font-size: 18px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  font-weight: 700;
+}
+
+.human-provider-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.human-provider-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.human-provider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.human-provider-total {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.72);
+  font-weight: 600;
+}
+
+.human-provider-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.human-provider-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-surface), 0.96);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  border-left-width: 4px;
+}
+
+.human-provider-metric-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
+}
+
+.human-provider-metric-value {
+  font-size: 18px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.9);
+  font-weight: 700;
+}
+
+.human-provider-metric-share {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.72);
+  font-weight: 600;
+}
+
 .scores-overview-card {
   display: flex;
   flex-direction: column;
@@ -639,6 +876,11 @@ onMounted(loadJobs)
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .human-provider-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 720px) {
@@ -651,6 +893,11 @@ onMounted(loadJobs)
     min-width: 0;
     max-width: none;
     width: 100%;
+  }
+
+  .human-outcome-grid,
+  .human-provider-metrics {
+    grid-template-columns: 1fr;
   }
 }
 </style>

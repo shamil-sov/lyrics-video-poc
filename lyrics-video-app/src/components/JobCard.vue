@@ -83,7 +83,7 @@
             :prepend-icon="reviewStatusIcon(providerReview('openAi')?.status)"
             class="job-status-review-chip"
           >
-            Human review: {{ providerReview('openAi') ? reviewStatusLabel(providerReview('openAi')!.status) : 'Not reviewed' }}
+            {{ providerReview('openAi') ? `${reviewStatusLabel(providerReview('openAi')!.status)} by Human` : 'Not reviewed' }}
           </v-chip>
         </div>
         <div class="job-status-card">
@@ -100,7 +100,7 @@
             :prepend-icon="reviewStatusIcon(providerReview('google')?.status)"
             class="job-status-review-chip"
           >
-            Human review: {{ providerReview('google') ? reviewStatusLabel(providerReview('google')!.status) : 'Not reviewed' }}
+            {{ providerReview('google') ? `${reviewStatusLabel(providerReview('google')!.status)} by Human` : 'Not reviewed' }}
           </v-chip>
         </div>
       </div>
@@ -411,7 +411,7 @@
                       :items="reviewStatusOptions"
                       item-title="title"
                       item-value="value"
-                      label="Score"
+                      label="Status"
                       variant="outlined"
                       density="comfortable"
                       hide-details
@@ -610,7 +610,7 @@
                       :items="reviewStatusOptions"
                       item-title="title"
                       item-value="value"
-                      label="Score"
+                      label="Status"
                       variant="outlined"
                       density="comfortable"
                       hide-details
@@ -736,9 +736,8 @@ const genreOptions: Array<{ title: string; value: string }> = [
 ]
 
 const reviewStatusOptions: Array<{ title: string; value: ProviderReviewStatus; icon: string }> = [
-  { title: 'Great', value: 'Great', icon: 'mdi-star-circle-outline' },
-  { title: 'Good', value: 'Good', icon: 'mdi-thumb-up-outline' },
-  { title: 'Bad', value: 'Bad', icon: 'mdi-thumb-down-outline' },
+  { title: 'Approved', value: 'Approved', icon: 'mdi-check-circle-outline' },
+  { title: 'Rejected', value: 'Rejected', icon: 'mdi-close-circle-outline' },
   { title: 'Not sure', value: 'NotSure', icon: 'mdi-help-circle-outline' },
 ]
 
@@ -754,9 +753,9 @@ const emit = defineEmits<{
 }>()
 
 const detailsOpen = ref(false)
-const openAiReviewStatus = ref<ProviderReviewStatus>('Good')
+const openAiReviewStatus = ref<ProviderReviewStatus>('Approved')
 const openAiReviewText = ref('')
-const googleReviewStatus = ref<ProviderReviewStatus>('Good')
+const googleReviewStatus = ref<ProviderReviewStatus>('Approved')
 const googleReviewText = ref('')
 const openAiReviewError = ref<string | null>(null)
 const googleReviewError = ref<string | null>(null)
@@ -811,12 +810,12 @@ function syncGenreForm() {
 
 function syncReviewForms() {
   const openAiReview = providerReview('openAi')
-  openAiReviewStatus.value = openAiReview?.status ?? 'Good'
+  openAiReviewStatus.value = openAiReview?.status ?? 'Approved'
   openAiReviewText.value = openAiReview?.text ?? ''
   openAiReviewError.value = null
 
   const googleReview = providerReview('google')
-  googleReviewStatus.value = googleReview?.status ?? 'Good'
+  googleReviewStatus.value = googleReview?.status ?? 'Approved'
   googleReviewText.value = googleReview?.text ?? ''
   googleReviewError.value = null
 }
@@ -920,11 +919,11 @@ async function clearReview(provider: ProviderKey) {
 
     if (provider === 'openAi') {
       openAiReviewOverride.value = null
-      openAiReviewStatus.value = 'Good'
+      openAiReviewStatus.value = 'Approved'
       openAiReviewText.value = ''
     } else {
       googleReviewOverride.value = null
-      googleReviewStatus.value = 'Good'
+      googleReviewStatus.value = 'Approved'
       googleReviewText.value = ''
     }
 
@@ -1061,12 +1060,10 @@ function providerIssues(provider: ProviderKey): string[] {
 
 function reviewStatusLabel(status: ProviderReviewStatus): string {
   switch (status) {
-    case 'Great':
-      return 'Great'
-    case 'Good':
-      return 'Good'
-    case 'Bad':
-      return 'Bad'
+    case 'Approved':
+      return 'Approved'
+    case 'Rejected':
+      return 'Rejected'
     default:
       return 'Not sure'
   }
@@ -1074,11 +1071,9 @@ function reviewStatusLabel(status: ProviderReviewStatus): string {
 
 function reviewStatusColor(status: ProviderReviewStatus): string {
   switch (status) {
-    case 'Great':
-      return 'great'
-    case 'Good':
+    case 'Approved':
       return 'success'
-    case 'Bad':
+    case 'Rejected':
       return 'error'
     default:
       return 'warning'
@@ -1087,12 +1082,10 @@ function reviewStatusColor(status: ProviderReviewStatus): string {
 
 function reviewStatusIcon(status?: ProviderReviewStatus | null): string {
   switch (status) {
-    case 'Great':
-      return 'mdi-star-circle-outline'
-    case 'Good':
-      return 'mdi-thumb-up-outline'
-    case 'Bad':
-      return 'mdi-thumb-down-outline'
+    case 'Approved':
+      return 'mdi-check-circle-outline'
+    case 'Rejected':
+      return 'mdi-close-circle-outline'
     case 'NotSure':
       return 'mdi-help-circle-outline'
     default:

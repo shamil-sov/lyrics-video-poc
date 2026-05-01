@@ -11,7 +11,7 @@ export type EvaluationStatus = 'Pending' | 'Evaluating' | 'Completed' | 'Failed'
 
 export type EvaluationWinner = 'OpenAI' | 'GoogleChirp3' | 'Tie' | 'BothBad'
 
-export type ProviderReviewStatus = 'Great' | 'Good' | 'Bad' | 'NotSure'
+export type ProviderReviewStatus = 'Approved' | 'Rejected' | 'NotSure'
 
 export interface ProviderTimings {
   transcriptionMs?: number | null
@@ -49,6 +49,24 @@ export interface LyricsVideoAverages {
   evaluatedCount?: number | null
 }
 
+export interface LyricsVideoHumanApprovalStats {
+  approved?: number | null
+  rejected?: number | null
+  notSure?: number | null
+  total?: number | null
+}
+
+export interface LyricsVideoHumanStats {
+  openAI?: number | null
+  googleCloud?: number | null
+  both?: number | null
+  none?: number | null
+  notSure?: number | null
+  total?: number | null
+  openAiApproval?: LyricsVideoHumanApprovalStats | null
+  googleCloudApproval?: LyricsVideoHumanApprovalStats | null
+}
+
 export interface LyricsVideoProviderReview {
   status: ProviderReviewStatus
   text?: string | null
@@ -58,6 +76,7 @@ export interface LyricsVideoProviderReview {
 export interface LyricsVideoListResponse {
   items: LyricsVideoJob[]
   averages?: LyricsVideoAverages | null
+  humanStats?: LyricsVideoHumanStats | null
 }
 
 export interface JobMetadata {
