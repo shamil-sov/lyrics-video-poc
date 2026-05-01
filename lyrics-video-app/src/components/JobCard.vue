@@ -380,7 +380,7 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="primary" />
-                    <span class="text-body-2 font-weight-medium">OpenAI human review</span>
+                    <span class="text-body-2 font-weight-medium">Current review</span>
                     <v-chip
                       v-if="providerReview('openAi')"
                       size="x-small"
@@ -579,7 +579,7 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="secondary" />
-                    <span class="text-body-2 font-weight-medium">Google human review</span>
+                    <span class="text-body-2 font-weight-medium">Current review</span>
                     <v-chip
                       v-if="providerReview('google')"
                       size="x-small"
