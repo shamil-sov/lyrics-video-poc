@@ -664,7 +664,7 @@ type ReviewEndpoint = 'openai' | 'google-cloud'
 const reviewStatusOptions: Array<{ title: string; value: ProviderReviewStatus; icon: string }> = [
   { title: 'Approve', value: 'Approved', icon: 'mdi-check-circle-outline' },
   { title: 'Reject', value: 'Rejected', icon: 'mdi-close-circle-outline' },
-  { title: 'NotSure', value: 'NotSure', icon: 'mdi-help-circle-outline' },
+  { title: 'Questionable', value: 'Questionable', icon: 'mdi-help-circle-outline' },
 ]
 
 const props = defineProps<{
@@ -946,7 +946,7 @@ function reviewStatusBadgeLabel(provider: ProviderKey): string {
     case 'Rejected':
       return 'Rejected'
     default:
-      return 'NotSure'
+      return 'Questionable'
   }
 }
 
@@ -969,7 +969,7 @@ function reviewStatusLabel(status: ProviderReviewStatus): string {
     case 'Rejected':
       return 'Rejected'
     default:
-      return 'Not sure'
+      return 'Questionable'
   }
 }
 
@@ -990,7 +990,7 @@ function reviewStatusIcon(status?: ProviderReviewStatus | null): string {
       return 'mdi-check-circle-outline'
     case 'Rejected':
       return 'mdi-close-circle-outline'
-    case 'NotSure':
+    case 'Questionable':
       return 'mdi-help-circle-outline'
     default:
       return 'mdi-account-clock-outline'

@@ -388,7 +388,7 @@ const humanOutcomeCards = computed(() => {
     { id: 'googleCloud', label: 'Google wins', value: humanStats.value.googleCloud ?? 0, color: 'secondary' },
     { id: 'both', label: 'Both', value: humanStats.value.both ?? 0, color: 'info' },
     { id: 'none', label: 'None', value: humanStats.value.none ?? 0, color: 'error' },
-    { id: 'notSure', label: 'Not sure', value: humanStats.value.notSure ?? 0, color: 'warning' },
+    { id: 'questionable', label: 'Questionable', value: humanStats.value.questionable ?? 0, color: 'warning' },
   ]
 
   return outcomes
@@ -474,9 +474,9 @@ const humanReviewFilterOptions = computed(() => {
       count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Rejected')).length,
     },
     {
-      label: 'Not sure',
-      value: 'NotSure',
-      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'NotSure')).length,
+      label: 'Questionable',
+      value: 'Questionable',
+      count: jobsInSelectedGenre.filter(job => matchesHumanReviewFilter(job, 'Questionable')).length,
     },
     {
       label: 'Not reviewed',
@@ -538,7 +538,7 @@ function createHumanProviderBar(
   const rawSegments = [
     { id: 'approved', label: 'Approved', count: stats?.approved ?? 0, color: 'success' },
     { id: 'rejected', label: 'Rejected', count: stats?.rejected ?? 0, color: 'error' },
-    { id: 'notSure', label: 'Not sure', count: stats?.notSure ?? 0, color: 'warning' },
+    { id: 'questionable', label: 'Questionable', count: stats?.questionable ?? 0, color: 'warning' },
   ]
 
   const fallbackTotal = rawSegments.reduce((sum, segment) => sum + segment.count, 0)

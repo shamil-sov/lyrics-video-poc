@@ -11,7 +11,7 @@ export type EvaluationStatus = 'Pending' | 'Evaluating' | 'Completed' | 'Failed'
 
 export type EvaluationWinner = 'OpenAI' | 'GoogleChirp3' | 'Tie' | 'BothBad'
 
-export type ProviderReviewStatus = 'Approved' | 'Rejected' | 'NotSure'
+export type ProviderReviewStatus = 'Approved' | 'Rejected' | 'Questionable'
 
 export interface ProviderTimings {
   transcriptionMs?: number | null
@@ -52,7 +52,7 @@ export interface LyricsVideoAverages {
 export interface LyricsVideoHumanApprovalStats {
   approved?: number | null
   rejected?: number | null
-  notSure?: number | null
+  questionable?: number | null
   total?: number | null
 }
 
@@ -61,7 +61,7 @@ export interface LyricsVideoHumanStats {
   googleCloud?: number | null
   both?: number | null
   none?: number | null
-  notSure?: number | null
+  questionable?: number | null
   total?: number | null
   openAiApproval?: LyricsVideoHumanApprovalStats | null
   googleCloudApproval?: LyricsVideoHumanApprovalStats | null
