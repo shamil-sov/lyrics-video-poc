@@ -1046,9 +1046,9 @@ function formatDate(dateStr: string): string {
 .job-card {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   background:
-    linear-gradient(180deg, rgba(var(--v-theme-surface), 0.98) 0%, rgba(var(--v-theme-surface), 0.92) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 255, 0.98) 100%),
     rgba(var(--v-theme-surface), 1);
-  box-shadow: 0 14px 30px rgba(6, 10, 20, 0.18);
+  box-shadow: 0 14px 30px rgba(38, 57, 77, 0.06);
 }
 
 .job-row {
@@ -1063,7 +1063,7 @@ function formatDate(dateStr: string): string {
 }
 
 .job-avatar {
-  box-shadow: 0 8px 18px rgba(6, 10, 20, 0.2);
+  box-shadow: 0 8px 18px rgba(38, 57, 77, 0.12);
 }
 
 .job-source-chip {
@@ -1171,9 +1171,7 @@ function formatDate(dateStr: string): string {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   border-radius: 14px;
   background: rgba(var(--v-theme-surface), 0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 18px rgba(6, 10, 20, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .job-status-label {
@@ -1233,8 +1231,8 @@ function formatDate(dateStr: string): string {
   background: rgba(var(--v-theme-surface), 0.985);
   border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 14px 28px rgba(6, 10, 20, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 14px 30px rgba(38, 57, 77, 0.08);
 }
 
 .details-panel {
@@ -1246,9 +1244,9 @@ function formatDate(dateStr: string): string {
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-surface), 0.82);
+  background: rgba(var(--v-theme-surface), 0.64);
   backdrop-filter: blur(4px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 
 .details-section-header--openai {
@@ -1256,7 +1254,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-primary), 0.24);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .details-section-header--google {
@@ -1264,7 +1262,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-primary), 0.24);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-primary), 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .details-section-header--evaluation {
@@ -1272,7 +1270,7 @@ function formatDate(dateStr: string): string {
   border-color: rgba(var(--v-theme-warning), 0.26);
   box-shadow:
     inset 0 3px 0 rgba(var(--v-theme-warning), 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .provider-review-panel {

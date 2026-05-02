@@ -79,6 +79,125 @@ export interface LyricsVideoListResponse {
   humanStats?: LyricsVideoHumanStats | null
 }
 
+export interface LyricsVideoInsightsApprovalRateStats {
+  total?: number | null
+  approved?: number | null
+  rejected?: number | null
+  questionable?: number | null
+  approvedPercent?: number | null
+  rejectedPercent?: number | null
+  questionablePercent?: number | null
+}
+
+export interface LyricsVideoInsightsApprovalRates {
+  description?: string | null
+  openAi?: LyricsVideoInsightsApprovalRateStats | null
+  googleCloud?: LyricsVideoInsightsApprovalRateStats | null
+}
+
+export interface LyricsVideoInsightsGenreProvider {
+  avgAiScore?: number | null
+  approved?: number | null
+  rejected?: number | null
+  questionable?: number | null
+  topIssues?: string[] | null
+}
+
+export interface LyricsVideoInsightsGenreBreakdownItem {
+  description?: string | null
+  genreSlug?: string | null
+  genreName?: string | null
+  jobCount?: number | null
+  openAi?: LyricsVideoInsightsGenreProvider | null
+  googleCloud?: LyricsVideoInsightsGenreProvider | null
+}
+
+export interface LyricsVideoInsightsAgreement {
+  description?: string | null
+  totalCompared?: number | null
+  agreed?: number | null
+  disagreed?: number | null
+  agreementPercent?: number | null
+}
+
+export interface LyricsVideoInsightsPerformanceProvider {
+  avgTranscriptionMs?: number | null
+  avgVideoGenerationMs?: number | null
+  avgFfmpegMs?: number | null
+  avgUploadMs?: number | null
+  avgTotalMs?: number | null
+  avgVideoSizeBytes?: number | null
+}
+
+export interface LyricsVideoInsightsPerformance {
+  description?: string | null
+  openAi?: LyricsVideoInsightsPerformanceProvider | null
+  googleCloud?: LyricsVideoInsightsPerformanceProvider | null
+}
+
+export interface LyricsVideoInsightsHeadToHead {
+  description?: string | null
+  totalEvaluated?: number | null
+  aiOpenAiWins?: number | null
+  aiGoogleCloudWins?: number | null
+  aiTies?: number | null
+  humanOpenAiWins?: number | null
+  humanGoogleCloudWins?: number | null
+  humanBoth?: number | null
+}
+
+export interface LyricsVideoInsightsIssuesSummary {
+  description?: string | null
+  openAiSummary?: string | null
+  googleCloudSummary?: string | null
+  basedOnJobCount?: number | null
+}
+
+export interface LyricsVideoInsightsStrategyOption {
+  label?: string | null
+  avgScore?: number | null
+  scoreImprovement?: number | null
+  approvedCount?: number | null
+  approvedPercent?: number | null
+  rejectedCount?: number | null
+  rejectedPercent?: number | null
+  timesSelected?: number | null
+  selectionPercent?: number | null
+}
+
+export interface LyricsVideoInsightsStrategyComparison {
+  description?: string | null
+  totalEvaluated?: number | null
+  openAiOnly?: LyricsVideoInsightsStrategyOption | null
+  googleCloudOnly?: LyricsVideoInsightsStrategyOption | null
+  mixed?: LyricsVideoInsightsStrategyOption | null
+  recommendation?: string | null
+}
+
+export interface LyricsVideoInsightsMixedApproach {
+  question?: string | null
+  answer?: string | null
+}
+
+export interface LyricsVideoInsightsAiScores {
+  description?: string | null
+  totalEvaluated?: number | null
+  openAiAvgScore?: number | null
+  googleCloudAvgScore?: number | null
+}
+
+export interface LyricsVideoInsightsResponse {
+  approvalRates?: LyricsVideoInsightsApprovalRates | null
+  genreBreakdown?: LyricsVideoInsightsGenreBreakdownItem[] | null
+  aiVsHumanAgreement?: LyricsVideoInsightsAgreement | null
+  performance?: LyricsVideoInsightsPerformance | null
+  headToHead?: LyricsVideoInsightsHeadToHead | null
+  issuesSummary?: LyricsVideoInsightsIssuesSummary | null
+  strategyComparison?: LyricsVideoInsightsStrategyComparison | null
+  mixedApproach?: LyricsVideoInsightsMixedApproach | null
+  aiScores?: LyricsVideoInsightsAiScores | null
+}
+
 export interface JobMetadata {
   songName?: string | null
   songPictureUrl?: string | null

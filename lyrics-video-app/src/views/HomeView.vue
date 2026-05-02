@@ -7,20 +7,8 @@
         Generate Lyrics Video
       </v-card-title>
 
-      <v-tabs v-model="inputTab" color="primary" class="px-4">
-        <v-tab value="url">
-          <v-icon start>mdi-link</v-icon>
-          Track URL
-        </v-tab>
-        <v-tab value="file">
-          <v-icon start>mdi-upload</v-icon>
-          Upload File
-        </v-tab>
-      </v-tabs>
-
       <v-card-text>
-        <!-- URL Tab -->
-        <v-form ref="urlForm" v-if="inputTab === 'url'" @submit.prevent="handleUrlSubmit" class="d-flex align-center ga-3">
+        <v-form ref="urlForm" @submit.prevent="handleUrlSubmit" class="d-flex align-center ga-3">
           <v-text-field
             v-model="trackUrl"
             label="BandLab Track URL"
@@ -44,33 +32,6 @@
             Generate
           </v-btn>
         </v-form>
-
-        <!-- File Upload Tab -->
-        <div v-else class="d-flex align-center ga-3">
-          <v-file-input
-            v-model="selectedFile"
-            label="Audio file"
-            placeholder="Select an audio file (mp3, m4a, wav, ogg, flac...)"
-            variant="outlined"
-            density="comfortable"
-            hide-details="auto"
-            accept="audio/*"
-            :disabled="submitting"
-            prepend-icon=""
-            prepend-inner-icon="mdi-music-box"
-            class="flex-grow-1"
-          />
-          <v-btn
-            color="primary"
-            size="large"
-            :loading="submitting"
-            :disabled="!selectedFile"
-            prepend-icon="mdi-creation"
-            @click="handleFileSubmit"
-          >
-            Generate
-          </v-btn>
-        </div>
       </v-card-text>
     </v-card>
 
@@ -91,7 +52,7 @@
       <v-progress-circular indeterminate color="primary" size="48" />
     </div>
 
-    <!-- Jobs List -->
+    <!-- Videos List -->
     <template v-else>
       <div class="jobs-layout" :class="{ 'jobs-layout--with-sidebar': hasSidebarStats }">
         <div class="jobs-main">
@@ -99,7 +60,7 @@
             <div class="d-flex align-center ga-2 flex-wrap">
               <h2 class="text-h6">
                 <v-icon class="mr-1">mdi-format-list-bulleted</v-icon>
-                Jobs
+                Videos
               </h2>
               <v-chip size="small" color="primary" variant="tonal">
                 {{ filteredJobs.length }}
@@ -110,30 +71,6 @@
             </div>
 
             <div class="jobs-toolbar-actions">
-              <v-select
-                v-model="selectedGenreFilter"
-                :items="genreFilterOptions"
-                item-title="title"
-                item-value="value"
-                label="Filter by genre"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                class="jobs-filter-select"
-              />
-
-              <v-select
-                v-model="selectedHumanReviewFilter"
-                :items="humanReviewFilterOptions"
-                item-title="title"
-                item-value="value"
-                label="Filter by human review"
-                variant="outlined"
-                density="comfortable"
-                hide-details
-                class="jobs-filter-select"
-              />
-
               <v-btn
                 variant="text"
                 size="small"
@@ -144,28 +81,54 @@
             </div>
           </div>
 
-          <div v-if="genreCounts.length" class="genre-filter-chips mb-4">
-            <v-chip
-              v-for="genre in genreFilterOptions"
-              :key="genre.value"
-              :color="selectedGenreFilter === genre.value ? 'primary' : undefined"
-              :variant="selectedGenreFilter === genre.value ? 'flat' : 'tonal'"
-              size="small"
-              class="genre-filter-chip"
-              @click="selectedGenreFilter = genre.value"
-            >
-              {{ genre.genreName }} ({{ genre.count }})
-            </v-chip>
+          <div v-if="genreCounts.length" class="mb-4">
+            <div class="filter-chip-header mb-2">
+              <span class="filter-chip-label">Filter by genre</span>
+            </div>
+
+            <div class="genre-filter-chips">
+              <v-chip
+                v-for="genre in genreFilterOptions"
+                :key="genre.value"
+                :color="selectedGenreFilter === genre.value ? 'primary' : undefined"
+                :variant="selectedGenreFilter === genre.value ? 'flat' : 'tonal'"
+                size="small"
+                class="genre-filter-chip"
+                @click="selectedGenreFilter = genre.value"
+              >
+                {{ genre.genreName }} ({{ genre.count }})
+              </v-chip>
+            </div>
+          </div>
+
+          <div v-if="jobs.length" class="mb-4">
+            <div class="filter-chip-header mb-2">
+              <span class="filter-chip-label">Filter by review status</span>
+            </div>
+
+            <div class="genre-filter-chips">
+              <v-chip
+                v-for="review in humanReviewFilterOptions"
+                :key="review.value"
+                :color="selectedHumanReviewFilter === review.value ? 'primary' : undefined"
+                :variant="selectedHumanReviewFilter === review.value ? 'flat' : 'tonal'"
+                size="small"
+                class="genre-filter-chip"
+                @click="selectedHumanReviewFilter = review.value"
+              >
+                {{ review.label }} ({{ review.count }})
+              </v-chip>
+            </div>
           </div>
 
           <div v-if="jobs.length === 0" class="text-center py-12 text-medium-emphasis">
             <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-video-off-outline</v-icon>
-            <p class="text-body-1">No jobs yet. Paste a track URL or upload an audio file to get started.</p>
+            <p class="text-body-1">No videos yet. Paste a track URL to get started.</p>
           </div>
 
           <div v-else-if="filteredJobs.length === 0" class="text-center py-12 text-medium-emphasis">
             <v-icon size="64" class="mb-4" color="grey-lighten-1">mdi-filter-outline</v-icon>
-            <p class="text-body-1">No jobs match the selected filters.</p>
+            <p class="text-body-1">No videos match the selected filters.</p>
           </div>
 
           <div v-else class="d-flex flex-column ga-4">
@@ -193,7 +156,7 @@
             </div>
 
             <p v-if="globalScoreBars.length" class="scores-overview-note mb-3">
-              Higher bars mean better average evaluation across all reviewed jobs.
+              Higher bars mean better average evaluation across all reviewed videos.
             </p>
 
             <div v-if="globalScoreBars.length" class="scores-overview-bars mb-4">
@@ -227,10 +190,10 @@
             <div class="scores-overview-grid">
               <div class="scores-overview-card">
                 <span class="scores-overview-label">Compared on</span>
-                <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }} jobs</span>
+                <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }} videos</span>
               </div>
               <div class="scores-overview-card">
-                <span class="scores-overview-label">Evaluated jobs</span>
+                <span class="scores-overview-label">Evaluated videos</span>
                 <span class="scores-overview-value">{{ averages?.evaluatedCount ?? 0 }}</span>
               </div>
             </div>
@@ -310,7 +273,7 @@ import type {
   ProviderReviewStatus,
 } from '@/types/lyricsVideo'
 
-const { jobs, averages, humanStats, loading, submitting, deletingJobId, error, loadJobs, submitJob, submitFile, removeJob } = useLyricsJobs()
+const { jobs, averages, humanStats, loading, submitting, deletingJobId, error, loadJobs, submitJob, removeJob } = useLyricsJobs()
 
 const ALL_GENRES = '__all__'
 const NO_GENRE = '__no-genre__'
@@ -319,10 +282,8 @@ const NOT_REVIEWED = '__not-reviewed__'
 
 type HumanReviewFilterValue = ProviderReviewStatus | typeof ALL_HUMAN_REVIEWS | typeof NOT_REVIEWED
 
-const inputTab = ref('url')
 const urlForm = ref<{ resetValidation: () => void } | null>(null)
 const trackUrl = ref('')
-const selectedFile = ref<File | undefined>()
 const selectedGenreFilter = ref(ALL_GENRES)
 const selectedHumanReviewFilter = ref<HumanReviewFilterValue>(ALL_HUMAN_REVIEWS)
 
@@ -459,7 +420,7 @@ const humanReviewFilterOptions = computed(() => {
 
   const options: Array<{ label: string; value: HumanReviewFilterValue; count: number }> = [
     {
-      label: 'All reviews',
+      label: 'Any review status',
       value: ALL_HUMAN_REVIEWS,
       count: jobsInSelectedGenre.length,
     },
@@ -582,14 +543,6 @@ async function handleUrlSubmit() {
   urlForm.value?.resetValidation()
 }
 
-async function handleFileSubmit() {
-  if (!selectedFile.value) return
-  const submitted = await submitFile(selectedFile.value)
-  if (!submitted) return
-
-  selectedFile.value = undefined
-}
-
 async function handleDelete(jobId: string) {
   const confirmed = window.confirm('Delete this lyrics video job? This cannot be undone.')
   if (!confirmed) return
@@ -644,15 +597,23 @@ onMounted(loadJobs)
   flex-wrap: wrap;
 }
 
-.jobs-filter-select {
-  min-width: 240px;
-  max-width: 320px;
-}
-
 .genre-filter-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.filter-chip-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-chip-label {
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.64);
+  font-weight: 600;
 }
 
 .genre-filter-chip {
@@ -869,12 +830,6 @@ onMounted(loadJobs)
   .jobs-toolbar,
   .jobs-toolbar-actions {
     align-items: stretch;
-  }
-
-  .jobs-filter-select {
-    min-width: 0;
-    max-width: none;
-    width: 100%;
   }
 
   .human-outcome-grid,

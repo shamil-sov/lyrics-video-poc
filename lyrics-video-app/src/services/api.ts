@@ -1,4 +1,5 @@
 import type {
+  LyricsVideoInsightsResponse,
   LyricsVideoProviderReview,
   LyricsVideoJob,
   LyricsVideoListResponse,
@@ -79,6 +80,10 @@ export async function triggerFromFile(file: File): Promise<TriggerResponse> {
 
 export async function getAllJobs(): Promise<LyricsVideoListResponse> {
   return request<LyricsVideoListResponse>('/lyrics-videos')
+}
+
+export async function getInsights(): Promise<LyricsVideoInsightsResponse> {
+  return request<LyricsVideoInsightsResponse>('/lyrics-videos/insights')
 }
 
 export async function getJobById(jobId: string): Promise<LyricsVideoJob> {
