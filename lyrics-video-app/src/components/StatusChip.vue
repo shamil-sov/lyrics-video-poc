@@ -52,7 +52,7 @@ const label = computed(() => {
     case 'Pending': return 'Queued'
     case 'Transcribing': return 'Creating subtitles'
     case 'GeneratingVideo': return 'Generating video'
-    case 'Completed': return 'Video is ready'
+    case 'Completed': return 'Ready'
     case 'Failed': return 'Generation failed'
     default: return props.status
   }

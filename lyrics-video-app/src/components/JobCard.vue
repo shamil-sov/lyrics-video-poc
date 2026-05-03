@@ -1,5 +1,12 @@
 <template>
-  <v-card class="job-card">
+  <v-card
+    class="job-card"
+    role="button"
+    tabindex="0"
+    @click="openDetails()"
+    @keydown.enter.prevent="openDetails()"
+    @keydown.space.prevent="openDetails()"
+  >
     <div class="job-row px-4 py-3">
       <div class="job-main d-flex ga-3 flex-grow-1" style="min-width: 0">
         <v-avatar
@@ -54,6 +61,7 @@
               target="_blank"
               rel="noopener"
               class="job-link-pill"
+              @click.stop
             >
               Track link
             </a>
@@ -70,63 +78,94 @@
 
       <div class="job-statuses d-flex align-center ga-2 flex-wrap">
         <div class="job-status-card">
-          <span class="job-status-label">OpenAI</span>
-          <StatusChip :status="props.job.openAi.status" />
-          <div v-if="providerScore('openAi') != null" class="job-status-score-pill">
-            <v-icon icon="mdi-star-four-points-outline" size="x-small" />
-            <span>{{ formatScore(providerScore('openAi')) }}</span>
+          <div class="job-status-header">
+            <span class="job-status-label">OpenAI</span>
           </div>
-          <v-chip
-            size="x-small"
-            variant="tonal"
-            :color="providerReview('openAi') ? reviewStatusColor(providerReview('openAi')!.status) : 'grey-darken-1'"
-            :prepend-icon="reviewStatusIcon(providerReview('openAi')?.status)"
-            class="job-status-review-chip"
-          >
-            {{ providerReview('openAi') ? `${reviewStatusLabel(providerReview('openAi')!.status)} by Human` : 'Not reviewed' }}
-          </v-chip>
+
+          <div class="job-status-meta">
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">Video Status</span>
+              <StatusChip :status="props.job.openAi.status" />
+            </div>
+
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">AI score</span>
+              <div v-if="providerScore('openAi') != null" class="job-status-score-pill">
+                <v-icon icon="mdi-star-four-points-outline" size="x-small" />
+                <span>{{ formatScore(providerScore('openAi')) }}</span>
+              </div>
+              <span v-else class="job-status-meta-note">{{ aiScoreStateLabel() }}</span>
+            </div>
+
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">Manual review</span>
+              <div class="job-status-review-value">
+                <span class="job-status-prefix">Current status</span>
+                <v-chip
+                  size="x-small"
+                  variant="tonal"
+                  :color="providerReview('openAi') ? reviewStatusColor(providerReview('openAi')!.status) : 'grey-darken-1'"
+                  :prepend-icon="reviewStatusIcon(providerReview('openAi')?.status)"
+                  class="job-status-review-chip"
+                >
+                  {{ manualReviewStatusText('openAi') }}
+                </v-chip>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="job-status-card">
-          <span class="job-status-label">Google</span>
-          <StatusChip :status="props.job.googleChirp.status" />
-          <div v-if="providerScore('google') != null" class="job-status-score-pill">
-            <v-icon icon="mdi-star-four-points-outline" size="x-small" />
-            <span>{{ formatScore(providerScore('google')) }}</span>
+          <div class="job-status-header">
+            <span class="job-status-label">Google</span>
           </div>
-          <v-chip
-            size="x-small"
-            variant="tonal"
-            :color="providerReview('google') ? reviewStatusColor(providerReview('google')!.status) : 'grey-darken-1'"
-            :prepend-icon="reviewStatusIcon(providerReview('google')?.status)"
-            class="job-status-review-chip"
-          >
-            {{ providerReview('google') ? `${reviewStatusLabel(providerReview('google')!.status)} by Human` : 'Not reviewed' }}
-          </v-chip>
+
+          <div class="job-status-meta">
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">Video Status</span>
+              <StatusChip :status="props.job.googleChirp.status" />
+            </div>
+
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">AI score</span>
+              <div v-if="providerScore('google') != null" class="job-status-score-pill">
+                <v-icon icon="mdi-star-four-points-outline" size="x-small" />
+                <span>{{ formatScore(providerScore('google')) }}</span>
+              </div>
+              <span v-else class="job-status-meta-note">{{ aiScoreStateLabel() }}</span>
+            </div>
+
+            <div class="job-status-meta-row">
+              <span class="job-status-meta-label">Manual review</span>
+              <div class="job-status-review-value">
+                <span class="job-status-prefix">Current status</span>
+                <v-chip
+                  size="x-small"
+                  variant="tonal"
+                  :color="providerReview('google') ? reviewStatusColor(providerReview('google')!.status) : 'grey-darken-1'"
+                  :prepend-icon="reviewStatusIcon(providerReview('google')?.status)"
+                  class="job-status-review-chip"
+                >
+                  {{ manualReviewStatusText('google') }}
+                </v-chip>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="job-actions d-flex ga-1 flex-shrink-0">
         <v-btn
           size="small"
-          variant="tonal"
-          color="primary"
-          prepend-icon="mdi-eye-outline"
-          @click="openDetails()"
-        >
-          Open
-        </v-btn>
-
-        <v-btn
-          size="small"
           variant="text"
           color="error"
-          prepend-icon="mdi-delete-outline"
+          icon="mdi-delete-outline"
+          aria-label="Delete video"
+          title="Delete video"
+          class="job-delete-button"
           :loading="props.deleting"
           :disabled="props.deleting"
-          @click="emit('remove', props.job.id)"
-        >
-          Delete
-        </v-btn>
+          @click.stop="emit('remove', props.job.id)"
+        />
       </div>
     </div>
 
@@ -335,8 +374,9 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="primary" />
-                    <span class="text-body-2 font-weight-medium">Human review</span>
+                    <span class="text-body-2 font-weight-medium">Manual review</span>
                     <v-spacer />
+                    <span class="review-current-status-label">Current status</span>
                     <v-chip
                       size="x-small"
                       variant="tonal"
@@ -357,7 +397,7 @@
                   </v-alert>
 
                   <p v-if="!canReview('openAi')" class="review-note mb-0">
-                    Human review becomes available after the video is ready.
+                    Manual review becomes available after the video is ready.
                   </p>
 
                   <div v-else class="review-form">
@@ -417,7 +457,7 @@
                           :disabled="isSavingReview('openAi')"
                           @click="clearReview('openAi')"
                         >
-                          Clear human review
+                          Clear manual review
                         </v-btn>
 
                         <v-btn
@@ -534,8 +574,9 @@
                 <v-sheet class="provider-review-panel pa-4" border rounded="lg">
                   <div class="d-flex align-center ga-2 mb-3">
                     <v-icon icon="mdi-thumb-up-down-outline" size="small" color="secondary" />
-                    <span class="text-body-2 font-weight-medium">Human review</span>
+                    <span class="text-body-2 font-weight-medium">Manual review</span>
                     <v-spacer />
+                    <span class="review-current-status-label">Current status</span>
                     <v-chip
                       size="x-small"
                       variant="tonal"
@@ -556,7 +597,7 @@
                   </v-alert>
 
                   <p v-if="!canReview('google')" class="review-note mb-0">
-                    Human review becomes available after the video is ready.
+                    Manual review becomes available after the video is ready.
                   </p>
 
                   <div v-else class="review-form">
@@ -616,7 +657,7 @@
                           :disabled="isSavingReview('google')"
                           @click="clearReview('google')"
                         >
-                          Clear human review
+                          Clear manual review
                         </v-btn>
 
                         <v-btn
@@ -933,21 +974,28 @@ function providerIssues(provider: ProviderKey): string[] {
     : evaluation.googleChirpIssues ?? []
 }
 
+function aiScoreStateLabel(): string {
+  switch (props.job.evaluation?.status) {
+    case 'Evaluating':
+      return 'Evaluating'
+    case 'Failed':
+      return 'Unavailable'
+    case 'Completed':
+      return 'Unavailable'
+    default:
+      return 'Pending'
+  }
+}
+
+function manualReviewStatusText(provider: ProviderKey): string {
+  const review = providerReview(provider)
+  return review ? reviewStatusLabel(review.status) : 'Not reviewed'
+}
+
 function reviewStatusBadgeLabel(provider: ProviderKey): string {
   const review = providerReview(provider)
 
-  if (!review) {
-    return 'Not reviewed'
-  }
-
-  switch (review.status) {
-    case 'Approved':
-      return 'Approved'
-    case 'Rejected':
-      return 'Rejected'
-    default:
-      return 'Questionable'
-  }
+  return review ? reviewStatusLabel(review.status) : 'Not reviewed'
 }
 
 function reviewStatusBadgeColor(provider: ProviderKey): string {
@@ -1049,6 +1097,19 @@ function formatDate(dateStr: string): string {
     linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 255, 0.98) 100%),
     rgba(var(--v-theme-surface), 1);
   box-shadow: 0 14px 30px rgba(38, 57, 77, 0.06);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.job-card:hover {
+  border-color: rgba(var(--v-theme-primary), 0.18);
+  box-shadow: 0 18px 34px rgba(38, 57, 77, 0.1);
+  transform: translateY(-1px);
+}
+
+.job-card:focus-visible {
+  outline: 2px solid rgba(var(--v-theme-primary), 0.45);
+  outline-offset: 2px;
 }
 
 .job-row {
@@ -1165,8 +1226,8 @@ function formatDate(dateStr: string): string {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  min-width: 130px;
+  gap: 10px;
+  min-width: 180px;
   padding: 10px 12px;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   border-radius: 14px;
@@ -1174,9 +1235,64 @@ function formatDate(dateStr: string): string {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
+.job-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
 .job-status-label {
   font-size: 12px;
   line-height: 1.2;
+  font-weight: 600;
+}
+
+.job-status-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.job-status-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.job-status-meta-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-weight: 600;
+}
+
+.job-status-meta-note {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.66);
+  font-weight: 600;
+  text-align: right;
+}
+
+.job-status-review-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.job-status-prefix {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
   font-weight: 600;
 }
 
@@ -1186,11 +1302,13 @@ function formatDate(dateStr: string): string {
   gap: 6px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(var(--v-theme-warning), 0.12);
-  color: rgba(var(--v-theme-on-surface), 0.78);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.08) 0%, rgba(var(--v-theme-primary), 0.03) 100%);
+  border: 1px solid rgba(var(--v-theme-primary), 0.16);
+  color: rgba(var(--v-theme-on-surface), 0.82);
   font-size: 11px;
   line-height: 1.2;
   font-weight: 700;
+  margin-left: auto;
 }
 
 .job-status-score-pill :deep(.v-icon) {
@@ -1199,12 +1317,22 @@ function formatDate(dateStr: string): string {
 
 .job-status-review-chip {
   max-width: 100%;
+  margin-left: auto;
 }
 
 .job-actions {
   align-items: flex-start;
   align-self: start;
   padding-top: 4px;
+}
+
+.job-delete-button {
+  opacity: 0.76;
+}
+
+.job-delete-button:hover,
+.job-delete-button:focus-visible {
+  opacity: 1;
 }
 
 .job-link-pill {
@@ -1315,6 +1443,13 @@ function formatDate(dateStr: string): string {
   line-height: 1.2;
   color: rgba(var(--v-theme-on-surface), 0.56);
   font-weight: 500;
+}
+
+.review-current-status-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-weight: 600;
 }
 
 .details-body {

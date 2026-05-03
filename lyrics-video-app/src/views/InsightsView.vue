@@ -8,21 +8,6 @@
           Team-facing quality, performance, and review analytics for all generated videos.
         </p>
       </div>
-
-      <div class="insights-hero-actions">
-        <v-chip size="small" variant="tonal" color="primary">
-          URL ready to share
-        </v-chip>
-        <v-btn
-          variant="outlined"
-          color="primary"
-          prepend-icon="mdi-refresh"
-          :loading="loading"
-          @click="loadInsights"
-        >
-          Refresh insights
-        </v-btn>
-      </div>
     </section>
 
     <v-alert
@@ -51,7 +36,7 @@
             <div class="insights-panel__header mb-3">
               <div>
                 <div class="insights-panel__eyebrow">Review quality</div>
-                <div class="text-h6 font-weight-medium">Human review</div>
+                <div class="text-h6 font-weight-medium">Manual Review</div>
               </div>
               <v-icon color="primary" icon="mdi-account-check-outline" />
             </div>
@@ -69,16 +54,15 @@
                 <div class="d-flex align-center justify-space-between ga-3 mb-3">
                   <div>
                     <div class="metric-card__title">{{ provider.label }}</div>
-                    <div class="metric-card__subtitle">{{ provider.total }} reviewed</div>
+                    <div class="metric-card__subtitle">{{ formatReviewedVideos(provider.total) }}</div>
                   </div>
-                  <v-chip size="small" variant="tonal" :color="provider.color">{{ provider.bestRate }}</v-chip>
                 </div>
 
                 <div class="metric-rows">
                   <div v-for="metric in provider.metrics" :key="metric.id" class="metric-row">
                     <div class="d-flex align-center justify-space-between ga-3 mb-1">
                       <span class="metric-row__label">{{ metric.label }}</span>
-                      <span class="metric-row__value">{{ metric.count }}</span>
+                      <span class="metric-row__value">{{ formatMetricCount(metric.count, provider.total, metric.percent) }}</span>
                     </div>
                     <v-progress-linear
                       :model-value="metric.percent || 0"
@@ -174,13 +158,19 @@
           </div>
 
           <p class="insights-note mb-4">
-            Expand a genre to compare provider quality, approval outcomes, and the most common issues for that category.
+            Compare provider quality, approval outcomes, and the most common issues for each genre.
           </p>
 
-          <v-expansion-panels variant="accordion" class="genre-panels">
+          <v-expansion-panels
+            v-model="expandedGenrePanels"
+            multiple
+            variant="accordion"
+            class="genre-panels"
+          >
             <v-expansion-panel
               v-for="(genre, index) in insights.genreBreakdown || []"
-              :key="genre.genreSlug || genre.genreName || `genre-${index}`"
+              :key="genrePanelValue(genre, index)"
+              :value="genrePanelValue(genre, index)"
               rounded="xl"
               class="genre-panel"
             >
@@ -206,6 +196,7 @@
                     <div class="d-flex align-center justify-space-between ga-3 mb-3">
                       <div>
                         <div class="metric-card__title">{{ provider.label }}</div>
+                        <div class="metric-card__subtitle">{{ formatReviewedCoverage(provider.totalReviewed, provider.totalVideos) }}</div>
                       </div>
                       <v-icon :color="provider.color" :icon="provider.icon" />
                     </div>
@@ -216,7 +207,7 @@
                       <div v-for="metric in provider.reviewMetrics" :key="metric.id" class="metric-row">
                         <div class="d-flex align-center justify-space-between ga-3 mb-1">
                           <span class="metric-row__label">{{ metric.label }}</span>
-                          <span class="metric-row__value">{{ metric.count }}</span>
+                          <span class="metric-row__value">{{ formatMetricRatio(metric.count, provider.totalReviewed) }}</span>
                         </div>
                         <v-progress-linear
                           :model-value="metric.percent || 0"
@@ -259,6 +250,7 @@ import type {
 const insights = ref<LyricsVideoInsightsResponse | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const expandedGenrePanels = ref<string[]>([])
 
 const approvalRateCards = computed(() => {
   return [
@@ -289,11 +281,16 @@ async function loadInsights() {
 
   try {
     insights.value = await getInsights()
+    expandedGenrePanels.value = (insights.value?.genreBreakdown ?? []).map((genre, index) => genrePanelValue(genre, index))
   } catch (e: any) {
     error.value = e.message || 'Failed to load insights'
   } finally {
     loading.value = false
   }
+}
+
+function genrePanelValue(genre: LyricsVideoInsightsGenreBreakdownItem, index: number): string {
+  return genre.genreSlug || genre.genreName || `genre-${index}`
 }
 
 function createApprovalRateCard(
@@ -326,22 +323,19 @@ function createApprovalRateCard(
     },
   ]
 
-  const bestMetric = [...metrics].sort((left, right) => (right.percent || 0) - (left.percent || 0))[0]
-
   return {
     id,
     label,
     color,
     total: stats?.total ?? 0,
     metrics,
-    bestRate: `${bestMetric.label} ${formatPercent(bestMetric.percent)}`,
   }
 }
 
 function genreProviderCards(genre: LyricsVideoInsightsGenreBreakdownItem) {
   return [
-    createGenreProviderCard('openAi', 'OpenAI', 'primary', 'mdi-robot', genre.openAi),
-    createGenreProviderCard('googleCloud', 'Google Cloud', 'secondary', 'mdi-google', genre.googleCloud),
+    createGenreProviderCard('openAi', 'OpenAI', 'primary', 'mdi-robot', genre.openAi, genre.jobCount),
+    createGenreProviderCard('googleCloud', 'Google Cloud', 'secondary', 'mdi-google', genre.googleCloud, genre.jobCount),
   ]
 }
 
@@ -351,6 +345,7 @@ function createGenreProviderCard(
   color: string,
   icon: string,
   provider?: LyricsVideoInsightsGenreProvider | null,
+  totalVideos?: number | null,
 ) {
   const approved = provider?.approved ?? 0
   const rejected = provider?.rejected ?? 0
@@ -362,6 +357,8 @@ function createGenreProviderCard(
     label,
     color,
     icon,
+    totalReviewed,
+    totalVideos: totalVideos ?? 0,
     reviewMetrics: [
       {
         id: 'approved',
@@ -400,6 +397,38 @@ function formatScore(value?: number | null): string {
 function formatNumber(value?: number | null): string {
   return value == null ? '--' : `${value}`
 }
+
+function formatReviewedVideos(value?: number | null): string {
+  if (value == null) {
+    return '--'
+  }
+
+  return value === 1 ? '1 video reviewed' : `${value} videos reviewed`
+}
+
+function formatMetricCount(count?: number | null, total?: number | null, percent?: number | null): string {
+  if (count == null || total == null || percent == null) {
+    return '--'
+  }
+
+  return `${count} of ${total} (${formatPercent(percent)})`
+}
+
+function formatMetricRatio(count?: number | null, total?: number | null): string {
+  if (count == null || total == null) {
+    return '--'
+  }
+
+  return `${count} of ${total}`
+}
+
+function formatReviewedCoverage(reviewed?: number | null, total?: number | null): string {
+  if (reviewed == null || total == null) {
+    return '--'
+  }
+
+  return `${reviewed} of ${total} videos reviewed`
+}
 </script>
 
 <style scoped>
@@ -410,7 +439,7 @@ function formatNumber(value?: number | null): string {
 .insights-hero {
   display: flex;
   align-items: end;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 20px;
   padding: 28px 32px;
   border-radius: 28px;
@@ -435,14 +464,6 @@ function formatNumber(value?: number | null): string {
   font-size: 15px;
   line-height: 1.6;
   color: rgba(var(--v-theme-on-surface), 0.76);
-}
-
-.insights-hero-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .insights-grid {
