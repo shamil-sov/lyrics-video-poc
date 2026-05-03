@@ -100,7 +100,6 @@
             <div class="job-status-meta-row">
               <span class="job-status-meta-label">Manual review</span>
               <div class="job-status-review-value">
-                <span class="job-status-prefix">Current status</span>
                 <v-chip
                   size="x-small"
                   variant="tonal"
@@ -137,7 +136,6 @@
             <div class="job-status-meta-row">
               <span class="job-status-meta-label">Manual review</span>
               <div class="job-status-review-value">
-                <span class="job-status-prefix">Current status</span>
                 <v-chip
                   size="x-small"
                   variant="tonal"
@@ -1287,13 +1285,6 @@ function formatDate(dateStr: string): string {
   gap: 6px;
   margin-left: auto;
   flex-wrap: wrap;
-}
-
-.job-status-prefix {
-  font-size: 11px;
-  line-height: 1.2;
-  color: rgba(var(--v-theme-on-surface), 0.58);
-  font-weight: 600;
 }
 
 .job-status-score-pill {
