@@ -186,94 +186,6 @@
         <v-divider />
 
         <v-card-text class="pa-5 details-body">
-          <v-sheet
-            v-if="props.job.evaluation"
-            class="evaluation-panel mb-5 pa-4"
-            border
-            rounded="xl"
-          >
-            <div class="details-section-header details-section-header--evaluation d-flex align-center ga-2 flex-wrap mb-4">
-              <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
-              <span class="text-body-1 font-weight-medium">AI evaluation</span>
-              <v-chip
-                v-if="props.job.evaluation.status !== 'Completed'"
-                size="small"
-                variant="tonal"
-                :color="evaluationStatusColor(props.job.evaluation.status)"
-              >
-                {{ evaluationStatusLabel(props.job.evaluation.status) }}
-              </v-chip>
-              <v-chip
-                v-if="props.job.evaluation.status === 'Completed' && props.job.evaluation.winner"
-                size="small"
-                variant="flat"
-                color="success"
-              >
-                {{ winnerLabel(props.job.evaluation.winner) }}
-              </v-chip>
-            </div>
-
-            <div v-if="props.job.evaluation.status === 'Evaluating'">
-              <p class="evaluation-note mb-3">
-                Gemini Flash-Lite is comparing both transcriptions against the original audio.
-              </p>
-              <v-progress-linear indeterminate color="primary" rounded />
-            </div>
-
-            <v-alert
-              v-else-if="props.job.evaluation.status === 'Failed' && props.job.evaluation.errorMessage"
-              type="error"
-              variant="tonal"
-            >
-              {{ props.job.evaluation.errorMessage }}
-            </v-alert>
-
-            <div v-else-if="props.job.evaluation.status === 'Completed'">
-              <p v-if="props.job.evaluation.summary" class="evaluation-summary mb-3">
-                {{ props.job.evaluation.summary }}
-              </p>
-
-              <div class="evaluation-score-grid">
-                <div class="evaluation-score-card">
-                  <span class="evaluation-score-label">OpenAI score</span>
-                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.openAiScore) }}</span>
-                </div>
-                <div class="evaluation-score-card">
-                  <span class="evaluation-score-label">Google score</span>
-                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
-                </div>
-              </div>
-
-              <div class="evaluation-issues-grid mt-3">
-                <div class="issues-panel pa-3">
-                  <div class="d-flex align-center ga-2 mb-2">
-                    <v-icon icon="mdi-robot" size="small" color="primary" />
-                    <span class="text-body-2 font-weight-medium">OpenAI issues</span>
-                  </div>
-                  <ul v-if="providerIssues('openAi').length" class="issues-list">
-                    <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
-                  </ul>
-                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
-                </div>
-
-                <div class="issues-panel pa-3">
-                  <div class="d-flex align-center ga-2 mb-2">
-                    <v-icon icon="mdi-google" size="small" color="secondary" />
-                    <span class="text-body-2 font-weight-medium">Google issues</span>
-                  </div>
-                  <ul v-if="providerIssues('google').length" class="issues-list">
-                    <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
-                  </ul>
-                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
-                </div>
-              </div>
-            </div>
-
-            <p v-else class="evaluation-note mb-0">
-              Evaluation starts after both transcription providers finish.
-            </p>
-          </v-sheet>
-
           <v-row class="details-provider-row" dense>
             <v-col cols="12" md="6">
               <v-sheet class="details-panel pa-5" border rounded="xl">
@@ -368,110 +280,6 @@
                 >
                   {{ props.job.openAi.errorMessage }}
                 </v-alert>
-
-                <v-sheet class="provider-review-panel pa-4" border rounded="lg">
-                  <div class="d-flex align-center ga-2 mb-3">
-                    <v-icon icon="mdi-thumb-up-down-outline" size="small" color="primary" />
-                    <span class="text-body-2 font-weight-medium">Manual review</span>
-                    <v-spacer />
-                    <span class="review-current-status-label">Current status</span>
-                    <v-chip
-                      size="x-small"
-                      variant="tonal"
-                      :color="reviewStatusBadgeColor('openAi')"
-                      :prepend-icon="reviewStatusBadgeIcon('openAi')"
-                    >
-                      {{ reviewStatusBadgeLabel('openAi') }}
-                    </v-chip>
-                  </div>
-
-                  <v-alert
-                    v-if="reviewError('openAi')"
-                    type="error"
-                    variant="tonal"
-                    class="mb-3"
-                  >
-                    {{ reviewError('openAi') }}
-                  </v-alert>
-
-                  <p v-if="!canReview('openAi')" class="review-note mb-0">
-                    Manual review becomes available after the video is ready.
-                  </p>
-
-                  <div v-else class="review-form">
-                    <v-select
-                      v-model="openAiReviewStatus"
-                      :items="reviewStatusOptions"
-                      item-title="title"
-                      item-value="value"
-                      label="Status"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details
-                      :disabled="isSavingReview('openAi') || isClearingReview('openAi')"
-                      class="review-status-select"
-                    >
-                      <template #item="{ props: itemProps, item }">
-                        <v-list-item
-                          v-bind="itemProps"
-                          :prepend-icon="item.raw.icon"
-                          :title="item.raw.title"
-                        />
-                      </template>
-
-                      <template #selection="{ item }">
-                        <div class="d-flex align-center ga-2">
-                          <v-icon size="small" :icon="item.raw.icon" />
-                          <span>{{ item.raw.title }}</span>
-                        </div>
-                      </template>
-                    </v-select>
-
-                    <v-textarea
-                      v-model="openAiReviewText"
-                      label="Optional note"
-                      placeholder="Add context if needed"
-                      variant="outlined"
-                      density="comfortable"
-                      rows="3"
-                      auto-grow
-                      hide-details="auto"
-                      :disabled="isSavingReview('openAi') || isClearingReview('openAi')"
-                      class="review-textarea"
-                    />
-
-                    <div class="review-form-actions">
-                      <div v-if="providerReview('openAi')" class="review-meta d-flex align-center ga-2 flex-wrap">
-                        <span class="review-date">Last saved {{ formatDate(providerReview('openAi')!.createdAt) }}</span>
-                      </div>
-
-                      <div class="review-form-buttons">
-                        <v-btn
-                          v-if="providerReview('openAi')"
-                          variant="text"
-                          color="error"
-                          prepend-icon="mdi-delete-outline"
-                          :loading="isClearingReview('openAi')"
-                          :disabled="isSavingReview('openAi')"
-                          @click="clearReview('openAi')"
-                        >
-                          Clear manual review
-                        </v-btn>
-
-                        <v-btn
-                          color="primary"
-                          prepend-icon="mdi-content-save-outline"
-                          :loading="isSavingReview('openAi')"
-                          :disabled="isClearingReview('openAi')"
-                          @click="saveReview('openAi')"
-                        >
-                          Submit Review
-                        </v-btn>
-                      </div>
-                    </div>
-                  </div>
-                </v-sheet>
-
               </v-sheet>
             </v-col>
 
@@ -568,110 +376,306 @@
                 >
                   {{ props.job.googleChirp.errorMessage }}
                 </v-alert>
+              </v-sheet>
+            </v-col>
+          </v-row>
 
-                <v-sheet class="provider-review-panel pa-4" border rounded="lg">
-                  <div class="d-flex align-center ga-2 mb-3">
-                    <v-icon icon="mdi-thumb-up-down-outline" size="small" color="secondary" />
-                    <span class="text-body-2 font-weight-medium">Manual review</span>
-                    <v-spacer />
-                    <span class="review-current-status-label">Current status</span>
-                    <v-chip
-                      size="x-small"
-                      variant="tonal"
-                      :color="reviewStatusBadgeColor('google')"
-                      :prepend-icon="reviewStatusBadgeIcon('google')"
-                    >
-                      {{ reviewStatusBadgeLabel('google') }}
-                    </v-chip>
+          <v-sheet
+            v-if="props.job.evaluation"
+            class="evaluation-panel my-5 pa-4"
+            border
+            rounded="xl"
+          >
+            <div class="details-section-header details-section-header--evaluation d-flex align-center ga-2 flex-wrap mb-4">
+              <v-icon icon="mdi-chart-box-outline" size="small" color="primary" />
+              <span class="text-body-1 font-weight-medium">AI evaluation</span>
+              <v-chip
+                v-if="props.job.evaluation.status !== 'Completed'"
+                size="small"
+                variant="tonal"
+                :color="evaluationStatusColor(props.job.evaluation.status)"
+              >
+                {{ evaluationStatusLabel(props.job.evaluation.status) }}
+              </v-chip>
+              <v-chip
+                v-if="props.job.evaluation.status === 'Completed' && props.job.evaluation.winner"
+                size="small"
+                variant="flat"
+                color="success"
+              >
+                {{ winnerLabel(props.job.evaluation.winner) }}
+              </v-chip>
+            </div>
+
+            <div v-if="props.job.evaluation.status === 'Evaluating'">
+              <p class="evaluation-note mb-3">
+                Gemini Flash-Lite is comparing both transcriptions against the original audio.
+              </p>
+              <v-progress-linear indeterminate color="primary" rounded />
+            </div>
+
+            <v-alert
+              v-else-if="props.job.evaluation.status === 'Failed' && props.job.evaluation.errorMessage"
+              type="error"
+              variant="tonal"
+            >
+              {{ props.job.evaluation.errorMessage }}
+            </v-alert>
+
+            <div v-else-if="props.job.evaluation.status === 'Completed'">
+              <p v-if="props.job.evaluation.summary" class="evaluation-summary mb-3">
+                {{ props.job.evaluation.summary }}
+              </p>
+
+              <div class="evaluation-score-grid">
+                <div class="evaluation-score-card">
+                  <span class="evaluation-score-label">OpenAI score</span>
+                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.openAiScore) }}</span>
+                </div>
+                <div class="evaluation-score-card">
+                  <span class="evaluation-score-label">Google score</span>
+                  <span class="evaluation-score-value">{{ formatScore(props.job.evaluation.googleChirpScore) }}</span>
+                </div>
+              </div>
+
+              <div class="evaluation-issues-grid mt-3">
+                <div class="issues-panel pa-3">
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-robot" size="small" color="primary" />
+                    <span class="text-body-2 font-weight-medium">OpenAI issues</span>
                   </div>
+                  <ul v-if="providerIssues('openAi').length" class="issues-list">
+                    <li v-for="issue in providerIssues('openAi')" :key="`openai-${issue}`">{{ issue }}</li>
+                  </ul>
+                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+                </div>
 
-                  <v-alert
-                    v-if="reviewError('google')"
-                    type="error"
+                <div class="issues-panel pa-3">
+                  <div class="d-flex align-center ga-2 mb-2">
+                    <v-icon icon="mdi-google" size="small" color="secondary" />
+                    <span class="text-body-2 font-weight-medium">Google issues</span>
+                  </div>
+                  <ul v-if="providerIssues('google').length" class="issues-list">
+                    <li v-for="issue in providerIssues('google')" :key="`google-${issue}`">{{ issue }}</li>
+                  </ul>
+                  <p v-else class="evaluation-note mb-0">No major issues reported.</p>
+                </div>
+              </div>
+            </div>
+
+            <p v-else class="evaluation-note mb-0">
+              Evaluation starts after both transcription providers finish.
+            </p>
+          </v-sheet>
+
+          <v-row class="details-provider-row" dense>
+            <v-col cols="12" md="6">
+              <v-sheet class="details-panel pa-5" border rounded="xl">
+                <div class="details-section-header details-section-header--openai d-flex align-center ga-2 mb-4">
+                  <v-icon icon="mdi-thumb-up-down-outline" size="small" color="primary" />
+                  <span class="text-subtitle-2 font-weight-medium">OpenAI manual review</span>
+                  <v-spacer />
+                  <span class="review-current-status-label">Current status</span>
+                  <v-chip
+                    size="x-small"
                     variant="tonal"
-                    class="mb-3"
+                    :color="reviewStatusBadgeColor('openAi')"
+                    :prepend-icon="reviewStatusBadgeIcon('openAi')"
                   >
-                    {{ reviewError('google') }}
-                  </v-alert>
+                    {{ reviewStatusBadgeLabel('openAi') }}
+                  </v-chip>
+                </div>
 
-                  <p v-if="!canReview('google')" class="review-note mb-0">
-                    Manual review becomes available after the video is ready.
-                  </p>
+                <v-alert
+                  v-if="reviewError('openAi')"
+                  type="error"
+                  variant="tonal"
+                  class="mb-3"
+                >
+                  {{ reviewError('openAi') }}
+                </v-alert>
 
-                  <div v-else class="review-form">
-                    <v-select
-                      v-model="googleReviewStatus"
-                      :items="reviewStatusOptions"
-                      item-title="title"
-                      item-value="value"
-                      label="Status"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details
-                      :disabled="isSavingReview('google') || isClearingReview('google')"
-                      class="review-status-select"
-                    >
-                      <template #item="{ props: itemProps, item }">
-                        <v-list-item
-                          v-bind="itemProps"
-                          :prepend-icon="item.raw.icon"
-                          :title="item.raw.title"
-                        />
-                      </template>
+                <p v-if="!canReview('openAi')" class="review-note mb-0">
+                  Manual review becomes available after the video is ready.
+                </p>
 
-                      <template #selection="{ item }">
-                        <div class="d-flex align-center ga-2">
-                          <v-icon size="small" :icon="item.raw.icon" />
-                          <span>{{ item.raw.title }}</span>
-                        </div>
-                      </template>
-                    </v-select>
+                <div v-else class="review-form">
+                  <v-select
+                    v-model="openAiReviewStatus"
+                    :items="reviewStatusOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Status"
+                    variant="outlined"
+                    density="comfortable"
+                    hide-details
+                    :disabled="isSavingReview('openAi') || isClearingReview('openAi')"
+                    class="review-status-select"
+                  >
+                    <template #item="{ props: itemProps, item }">
+                      <v-list-item
+                        v-bind="itemProps"
+                        :prepend-icon="item.raw.icon"
+                        :title="item.raw.title"
+                      />
+                    </template>
 
-                    <v-textarea
-                      v-model="googleReviewText"
-                      label="Optional note"
-                      placeholder="Add context if needed"
-                      variant="outlined"
-                      density="comfortable"
-                      rows="3"
-                      auto-grow
-                      hide-details="auto"
-                      :disabled="isSavingReview('google') || isClearingReview('google')"
-                      class="review-textarea"
-                    />
-
-                    <div class="review-form-actions">
-                      <div v-if="providerReview('google')" class="review-meta d-flex align-center ga-2 flex-wrap">
-                        <span class="review-date">Last saved {{ formatDate(providerReview('google')!.createdAt) }}</span>
+                    <template #selection="{ item }">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="small" :icon="item.raw.icon" />
+                        <span>{{ item.raw.title }}</span>
                       </div>
+                    </template>
+                  </v-select>
 
-                      <div class="review-form-buttons">
-                        <v-btn
-                          v-if="providerReview('google')"
-                          variant="text"
-                          color="error"
-                          prepend-icon="mdi-delete-outline"
-                          :loading="isClearingReview('google')"
-                          :disabled="isSavingReview('google')"
-                          @click="clearReview('google')"
-                        >
-                          Clear manual review
-                        </v-btn>
+                  <v-textarea
+                    v-model="openAiReviewText"
+                    label="Optional note"
+                    placeholder="Add context if needed"
+                    variant="outlined"
+                    density="comfortable"
+                    rows="3"
+                    auto-grow
+                    hide-details="auto"
+                    :disabled="isSavingReview('openAi') || isClearingReview('openAi')"
+                    class="review-textarea"
+                  />
 
-                        <v-btn
-                          color="primary"
-                          prepend-icon="mdi-content-save-outline"
-                          :loading="isSavingReview('google')"
-                          :disabled="isClearingReview('google')"
-                          @click="saveReview('google')"
-                        >
-                          Submit Review
-                        </v-btn>
-                      </div>
+                  <div class="review-form-actions">
+                    <div v-if="providerReview('openAi')" class="review-meta d-flex align-center ga-2 flex-wrap">
+                      <span class="review-date">Last saved {{ formatDate(providerReview('openAi')!.createdAt) }}</span>
+                    </div>
+
+                    <div class="review-form-buttons">
+                      <v-btn
+                        v-if="providerReview('openAi')"
+                        variant="text"
+                        color="error"
+                        prepend-icon="mdi-delete-outline"
+                        :loading="isClearingReview('openAi')"
+                        :disabled="isSavingReview('openAi')"
+                        @click="clearReview('openAi')"
+                      >
+                        Clear manual review
+                      </v-btn>
+
+                      <v-btn
+                        color="primary"
+                        prepend-icon="mdi-content-save-outline"
+                        :loading="isSavingReview('openAi')"
+                        :disabled="isClearingReview('openAi')"
+                        @click="saveReview('openAi')"
+                      >
+                        Submit Review
+                      </v-btn>
                     </div>
                   </div>
-                </v-sheet>
+                </div>
+              </v-sheet>
+            </v-col>
 
+            <v-col cols="12" md="6">
+              <v-sheet class="details-panel pa-5" border rounded="xl">
+                <div class="details-section-header details-section-header--google d-flex align-center ga-2 mb-4">
+                  <v-icon icon="mdi-thumb-up-down-outline" size="small" color="secondary" />
+                  <span class="text-subtitle-2 font-weight-medium">Google manual review</span>
+                  <v-spacer />
+                  <span class="review-current-status-label">Current status</span>
+                  <v-chip
+                    size="x-small"
+                    variant="tonal"
+                    :color="reviewStatusBadgeColor('google')"
+                    :prepend-icon="reviewStatusBadgeIcon('google')"
+                  >
+                    {{ reviewStatusBadgeLabel('google') }}
+                  </v-chip>
+                </div>
+
+                <v-alert
+                  v-if="reviewError('google')"
+                  type="error"
+                  variant="tonal"
+                  class="mb-3"
+                >
+                  {{ reviewError('google') }}
+                </v-alert>
+
+                <p v-if="!canReview('google')" class="review-note mb-0">
+                  Manual review becomes available after the video is ready.
+                </p>
+
+                <div v-else class="review-form">
+                  <v-select
+                    v-model="googleReviewStatus"
+                    :items="reviewStatusOptions"
+                    item-title="title"
+                    item-value="value"
+                    label="Status"
+                    variant="outlined"
+                    density="comfortable"
+                    hide-details
+                    :disabled="isSavingReview('google') || isClearingReview('google')"
+                    class="review-status-select"
+                  >
+                    <template #item="{ props: itemProps, item }">
+                      <v-list-item
+                        v-bind="itemProps"
+                        :prepend-icon="item.raw.icon"
+                        :title="item.raw.title"
+                      />
+                    </template>
+
+                    <template #selection="{ item }">
+                      <div class="d-flex align-center ga-2">
+                        <v-icon size="small" :icon="item.raw.icon" />
+                        <span>{{ item.raw.title }}</span>
+                      </div>
+                    </template>
+                  </v-select>
+
+                  <v-textarea
+                    v-model="googleReviewText"
+                    label="Optional note"
+                    placeholder="Add context if needed"
+                    variant="outlined"
+                    density="comfortable"
+                    rows="3"
+                    auto-grow
+                    hide-details="auto"
+                    :disabled="isSavingReview('google') || isClearingReview('google')"
+                    class="review-textarea"
+                  />
+
+                  <div class="review-form-actions">
+                    <div v-if="providerReview('google')" class="review-meta d-flex align-center ga-2 flex-wrap">
+                      <span class="review-date">Last saved {{ formatDate(providerReview('google')!.createdAt) }}</span>
+                    </div>
+
+                    <div class="review-form-buttons">
+                      <v-btn
+                        v-if="providerReview('google')"
+                        variant="text"
+                        color="error"
+                        prepend-icon="mdi-delete-outline"
+                        :loading="isClearingReview('google')"
+                        :disabled="isSavingReview('google')"
+                        @click="clearReview('google')"
+                      >
+                        Clear manual review
+                      </v-btn>
+
+                      <v-btn
+                        color="primary"
+                        prepend-icon="mdi-content-save-outline"
+                        :loading="isSavingReview('google')"
+                        :disabled="isClearingReview('google')"
+                        @click="saveReview('google')"
+                      >
+                        Submit Review
+                      </v-btn>
+                    </div>
+                  </div>
+                </div>
               </v-sheet>
             </v-col>
           </v-row>
